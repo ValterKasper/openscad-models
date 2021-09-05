@@ -1,9 +1,9 @@
 # OpenSCAD models
 
 
-| ![preview 1](images/continuous_track.png) | ![preview 1](images/todo.png) | ![preview 1](images/todo.png) |
+| ![preview 1](images/continuous_track.png) | ![preview 1](images/pole_holder.png) | ![preview 1](images/todo.png) |
 | --- | --- | --- |
-| Continuous tracks, that can be printed in place. | TODO | TODO |
+| Continuous tracks, that can be printed in place. | Pole holder | TODO |
 
 ## Usage
 
