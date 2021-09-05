@@ -12,7 +12,9 @@ OUTPUT_DIR = output
 		-o $@ \
 		--render \
 		--imgsize=1024,1024 \
-		--colorscheme "Tomorrow Night" \
+		--colorscheme "Tomorrow Night"
+	mkdir -p $(OUTPUT_DIR)
+	mv $@ $(OUTPUT_DIR)/$@
 
 clear: 
 	rm -f $(OUTPUT_DIR)/*.stl

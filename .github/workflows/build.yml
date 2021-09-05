@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get install xvfb
           
-      - name: Build gcodes
+      - name: Build geometry
         run: ./build_models.sh
 
       - name: Render previews
