@@ -2,7 +2,7 @@ include <BOSL2/std.scad>
 include <BOSL2/hull.scad>
 include <BOSL2/metric_screws.scad>
 
-$fn = 64;
+$fn = 12;
 
 center_color = "#777"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
 front_color = "white"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
@@ -262,8 +262,10 @@ module pcb_holder_demo() {
     }
 }
 
-x_pi_screw_dist = 57;
-y_pi_screw_dist = 50;
+x_pi_screw_dist = 58;
+y_pi_screw_dist = 49;
+pi_bolt_size = 2.5;
+
 
 function muv(size, path, radius) = move([
     size[0] / 2 - radius, 
@@ -275,9 +277,11 @@ function muv(size, path, radius) = move([
 //  B----A
 //  |    |
 //  C----D   
-function rounded_rect(size, rounding = [1, 1, 1, 1]) = 
+//  TODO sprav nejak, aby sa dali spravne umiestnovat objekty voci rounded_rect
+function rounded_rect(corner_centers_distances, rounding = [1, 1, 1, 1]) = 
     let(
         nut_holder_radius = get_nut_holder_outer_diameter() / 2 - 2,
+        size = corner_centers_distances + [nut_holder_radius * 2, nut_holder_radius * 2],
         r0 = rect(
             size = size, 
             rounding = [
@@ -298,13 +302,6 @@ function rounded_rect(size, rounding = [1, 1, 1, 1]) =
     )
     difference(outer_rect, inner_rect);
 
-region(rounded_rect([50, 50]));
-
-
-#oval(r = get_nut_holder_outer_diameter() / 2);
-// TODO dories spravnu velkost rounded_rect (vid odskok)
-//  - size by malo urcovat vzdialednosti stredov rohov
-// TODO sprav tento tvar:
 //  O---O---O
 //  |       |
 //  O---O---O
@@ -312,11 +309,53 @@ region(rounded_rect([50, 50]));
 //  O---O---O
 //  |       |
 //  O---O---O
-//  TODO sprav nejak, aby sa dali spravne umiestnovat objekty voci rounded_rect
-move(x = 50)
-#oval(r = get_nut_holder_outer_diameter() / 2);
+module holder() {
+    module pi_holder() {
+        region(rounded_rect([x_pi_screw_dist, y_pi_screw_dist]));
+        region(rounded_rect([x_pi_screw_dist / 2, y_pi_screw_dist]));
+        move(x = x_pi_screw_dist / 2)
+        region(rounded_rect([x_pi_screw_dist / 2, y_pi_screw_dist]));
+    }
 
+    // top
+    move(y = -20)
+    region(rounded_rect([x_pi_screw_dist, 20]));
 
+    // center
+    pi_holder();
+
+    // bottom
+    move(y = y_pi_screw_dist)
+    region(rounded_rect([x_pi_screw_dist, 30]));
+
+    // TODO remove
+    move(y = y_pi_screw_dist)
+    union() {
+        oval(r = get_nut_holder_outer_diameter() / 2);
+        move(x = x_pi_screw_dist)
+        oval(r = get_nut_holder_outer_diameter() / 2);
+    }
+}
+
+holder_height = 2;
+
+linear_extrude(holder_height)
+holder();
+
+xflip_copy(x = x_pi_screw_dist / 2)
+move(z = holder_height, y = y_pi_screw_dist)
+#zcyl(
+    d = get_metric_bolt_head_size(pi_bolt_size),
+    h = get_metric_bolt_head_height(pi_bolt_size),
+    anchor = BOTTOM) {
+        zcyl(
+            d = pi_bolt_size - print_clearance * 2,
+            h = 4,
+            anchor = BOTTOM);
+    };
+
+echo(str("Variable = get_metric_bolt_head_size ", get_metric_bolt_head_size(pi_bolt_size)));
+echo(str("Variable = get_metric_bolt_head_height ", get_metric_bolt_head_height(pi_bolt_size)));
 
 
 
