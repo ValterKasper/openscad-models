@@ -1,13 +1,14 @@
 include <BOSL2/std.scad>
 include <BOSL2/hull.scad>
+include <BOSL2/metric_screws.scad>
 
 $fn = 64;
 
-center_color = "silver"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
+center_color = "#777"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
 front_color = "white"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
 
 eps = 0.01;
-print_clearance = 0.2;
+print_clearance = 0.15;
 wall_thickness = 1.4;
 
 // size_multiplier = 45;
@@ -184,15 +185,138 @@ module front_block(anchor = CENTER) {
     }
 }
 
-recolor(center_color)
-center_blok()
-position(CENTER + FRONT) 
+module case_preview() {
+    recolor(center_color)
+    center_blok()
+    position(CENTER + FRONT) 
 
-color(front_color)
-render(convexity = 3) front_block() {
-    position(BOTTOM + BACK) 
-    front_screw_block(anchor = BOTTOM);
+    color(front_color)
+    render(convexity = 1) front_block() {
+        position(BOTTOM + BACK) 
+        front_screw_block(anchor = BOTTOM);
+    }
 }
+
+function get_nut_holder_outer_diameter(bolt_size = 3) =
+    get_metric_nut_size(bolt_size) * 1.6;
+
+// nut -> matica
+// bolt -> skrutka
+// screw -> skrutka
+// Cylinder with hole inside for nut
+module nut_holder(bolt_size = 3) {
+    echo(str("Variable = nut_size ",  get_metric_nut_size(bolt_size)));
+    echo(str("Variable = nut_thickness ",  get_metric_nut_thickness(bolt_size)));
+
+    module nut_mask() {
+        bolt_inner_diameter = get_metric_nut_size(bolt_size) + print_clearance * 2;
+        bolt_height = get_metric_nut_thickness(bolt_size) + print_clearance * 2;
+        linear_extrude(bolt_height, center = true)
+        hexagon(id = bolt_inner_diameter);
+
+        screw_diameter = bolt_size + print_clearance * 2;
+        zcyl(d = screw_diameter, h = 20);
+    }
+
+    diff("hole")
+    zcyl(d = get_nut_holder_outer_diameter(bolt_size), h = 5) {
+        tags("hole") nut_mask();
+    }
+}
+
+module pcb_holder_demo() {
+    nut_holder();
+
+    move(x = struct_size, y = 0)
+    nut_holder();
+
+    move(x = struct_size, y = struct_size)
+    nut_holder();
+
+    move(x = 0, y = struct_size)
+    nut_holder();
+
+    struct_size = 60;
+    path = turtle([
+        "xmove", struct_size,
+        "left", 135,
+        "untilx", struct_size / 2,
+        "jump", [0, 0]
+    ]);
+
+    down(2.5)
+    difference() {
+        linear_extrude(3)
+        shell2d([3, -3], ir = 2, or = 2) {
+            oval_size = 3;
+            yflip_copy(y = struct_size / 2)
+            region([path]);
+
+            xflip_copy(x = 29.5)
+            right(struct_size)
+            rot(90)
+            region([path]);
+        }
+
+        zcyl(r = 4, h = 20);
+    }
+}
+
+x_pi_screw_dist = 57;
+y_pi_screw_dist = 50;
+
+function muv(size, path, radius) = move([
+    size[0] / 2 - radius, 
+    size[1] / 2 - radius, 
+    0], 
+    p = path);
+
+// [A, B, C, D]
+//  B----A
+//  |    |
+//  C----D   
+function rounded_rect(size, rounding = [1, 1, 1, 1]) = 
+    let(
+        nut_holder_radius = get_nut_holder_outer_diameter() / 2 - 2,
+        r0 = rect(
+            size = size, 
+            rounding = [
+                nut_holder_radius * rounding[0], 
+                nut_holder_radius * rounding[1], 
+                nut_holder_radius * rounding[2], 
+                nut_holder_radius * rounding[3]
+                ],
+                center = true),
+        outer_rect = muv(size, r0, nut_holder_radius),
+        inner_rect = muv(size, rect(
+            size = [
+                size[0] - nut_holder_radius * 4, 
+                size[1] - nut_holder_radius * 4
+            ], 
+            center = true, 
+            rounding = nut_holder_radius), nut_holder_radius)
+    )
+    difference(outer_rect, inner_rect);
+
+region(rounded_rect([50, 50]));
+
+
+#oval(r = get_nut_holder_outer_diameter() / 2);
+// TODO dories spravnu velkost rounded_rect (vid odskok)
+//  - size by malo urcovat vzdialednosti stredov rohov
+// TODO sprav tento tvar:
+//  O---O---O
+//  |       |
+//  O---O---O
+//  |   |   |
+//  O---O---O
+//  |       |
+//  O---O---O
+//  TODO sprav nejak, aby sa dali spravne umiestnovat objekty voci rounded_rect
+move(x = 50)
+#oval(r = get_nut_holder_outer_diameter() / 2);
+
+
 
 
 
