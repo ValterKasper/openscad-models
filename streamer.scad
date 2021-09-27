@@ -5,14 +5,14 @@ include <BOSL2/metric_screws.scad>
 $fn = 12;
 
 center_color = "#777"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
-front_color = "white"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
+front_color = "GoldenRod"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
 
 eps = 0.01;
 print_clearance = 0.15;
 wall_thickness = 1.4;
 
-// size_multiplier = 45;
-size_multiplier = 20;
+size_multiplier = 45;
+// size_multiplier = 20;
 width_relative = 4;
 height_relative = 1;
 width = width_relative * size_multiplier;
@@ -185,18 +185,6 @@ module front_block(anchor = CENTER) {
     }
 }
 
-module case_preview() {
-    recolor(center_color)
-    center_blok()
-    position(CENTER + FRONT) 
-
-    color(front_color)
-    render(convexity = 1) front_block() {
-        position(BOTTOM + BACK) 
-        front_screw_block(anchor = BOTTOM);
-    }
-}
-
 function get_nut_holder_outer_diameter(bolt_size = 3) =
     get_metric_nut_size(bolt_size) * 1.6;
 
@@ -318,7 +306,6 @@ module rpi(anchor, spin, orient) {
         [rpi_size_x, rpi_size_y, rpi_pcb_thickness],
         anchors = anchors
     ) {
-        color("green", 0.25)
         linear_extrude(rpi_pcb_thickness, center = true)
         diff("bolt")
         rect([rpi_size_x, rpi_size_y]) {
@@ -381,9 +368,9 @@ module pcb_snap(anchor = FRONT, spin) {
 //  |   |RPI|RPI|RPI|   |
 //  |   |RPI|RPI|RPI|   |
 //  C---O---O---O---O---D
-module holder(anchor, show_rpi = false) {
+module holder(anchor, spin, show_rpi = false) {
     x_side_size = 20;
-    y_top_size = 20;
+    y_top_size = 55;
     x_distance_to_rpi_end = rpi_size_x - hole_distance * 2 - x_rpi_screw_dist;
     module knut() {
         zcyl(
@@ -415,85 +402,104 @@ module holder(anchor, show_rpi = false) {
         y_top_size / 2, 
         0
     ];
-    attachable(anchor = anchor, size = size, offset = offset, anchors = anchors) {
+    attachable(anchor = anchor, spin = spin, size = size, offset = offset, anchors = anchors) {
         diff("nut_mask")
-            rounded_hollow_cube([x_rpi_screw_dist, y_rpi_screw_dist]) {
-
-                // top
-                position(BACK)
-                rounded_hollow_cube([x_rpi_screw_dist, y_top_size], anchor = FRONT) {
-                    position(LEFT)
-                    rounded_hollow_cube([x_side_size, y_top_size], anchor = RIGHT) {
-                        // nut B
-                        position(LEFT + BACK + BOTTOM)
-                        nut_holder(anchor = BOTTOM)
-                        tags("nut_mask") 
-                        nut_holder_nut_mask();
-                    };
-
-                    position(RIGHT)
-                    rounded_hollow_cube([x_side_size + x_distance_to_rpi_end, y_top_size], anchor = LEFT) {
-                        // nut A
-                        position(RIGHT + BACK + BOTTOM)
-                        nut_holder(anchor = BOTTOM)
-                        tags("nut_mask") 
-                        nut_holder_nut_mask();
-                    }
-                };
-
-                // bottom
-                position(LEFT) 
-                rounded_hollow_cube([x_rpi_screw_dist / 2, y_rpi_screw_dist], anchor = LEFT) {
-                    position(LEFT)
-                    rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = RIGHT) {
-                        // nut C
-                        position(LEFT + FRONT + BOTTOM)
-                        nut_holder(anchor = BOTTOM)
-                        tags("nut_mask") 
-                        nut_holder_nut_mask();
-                    };
-
-                };
-                position(RIGHT) 
-                rounded_hollow_cube([x_rpi_screw_dist / 2, y_rpi_screw_dist], anchor = RIGHT)  {
-                
-                    position(RIGHT)
-                    rounded_hollow_cube([x_distance_to_rpi_end, y_rpi_screw_dist], anchor = LEFT) {
-                        position(RIGHT)
-                        rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = LEFT) {
-                            // nut D
-                            position(RIGHT + FRONT + BOTTOM)
-                            nut_holder(anchor = BOTTOM)
-                            tags("nut_mask") 
-                            nut_holder_nut_mask();
-                        };
-                    };
-                };
-
-                // knuts
-                position([LEFT + BACK, RIGHT + BACK])
-                knut();
-
-                // snaps
-                position(BACK)
-                pcb_snap();
+        recolor("grey")
+        rounded_hollow_cube([x_rpi_screw_dist, y_rpi_screw_dist]) {
+            // top
+            position(BACK)
+            rounded_hollow_cube([x_rpi_screw_dist, y_top_size], anchor = FRONT) {
                 position(LEFT)
-                move(y = 17)
-                pcb_snap(spin = 90);
-                position(LEFT)
-                move(y = -17)
-                pcb_snap(spin = 90);
+                rounded_hollow_cube([x_side_size, y_top_size], anchor = RIGHT) {
+                    // nut B
+                    position(LEFT + BACK + BOTTOM)
+                    nut_holder(anchor = BOTTOM)
+                    tags("nut_mask") 
+                    nut_holder_nut_mask();
+                };
 
-                if (show_rpi)
-                    position(BACK + LEFT+ TOP)
-                    move(z = get_metric_bolt_head_height(rpi_bolt_size))
-                    rpi(anchor = "B");
+                position(RIGHT)
+                rounded_hollow_cube([x_side_size + x_distance_to_rpi_end, y_top_size], anchor = LEFT) {
+                    // nut A
+                    position(RIGHT + BACK + BOTTOM)
+                    nut_holder(anchor = BOTTOM)
+                    tags("nut_mask") 
+                    nut_holder_nut_mask();
+                }
             };
+
+            // bottom
+            position(LEFT) 
+            rounded_hollow_cube([x_rpi_screw_dist / 2, y_rpi_screw_dist], anchor = LEFT) {
+                position(LEFT)
+                rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = RIGHT) {
+                    // nut C
+                    position(LEFT + FRONT + BOTTOM)
+                    nut_holder(anchor = BOTTOM)
+                    tags("nut_mask") 
+                    nut_holder_nut_mask();
+                };
+
+            };
+            position(RIGHT) 
+            rounded_hollow_cube([x_rpi_screw_dist / 2, y_rpi_screw_dist], anchor = RIGHT)  {
+            
+                position(RIGHT)
+                rounded_hollow_cube([x_distance_to_rpi_end, y_rpi_screw_dist], anchor = LEFT) {
+                    position(RIGHT)
+                    rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = LEFT) {
+                        // nut D
+                        position(RIGHT + FRONT + BOTTOM)
+                        nut_holder(anchor = BOTTOM)
+                        tags("nut_mask") 
+                        nut_holder_nut_mask();
+                    };
+                };
+            };
+
+            // knuts
+            position([LEFT + BACK, RIGHT + BACK])
+            knut();
+
+            // snaps
+            position(BACK)
+            pcb_snap();
+            position(LEFT)
+            move(y = 17)
+            pcb_snap(spin = 90);
+            position(LEFT)
+            move(y = -17)
+            pcb_snap(spin = 90);
+
+            if (show_rpi)
+                recolor("green")
+                position(BACK + LEFT+ TOP)
+                move(z = get_metric_bolt_head_height(rpi_bolt_size))
+                rpi(anchor = "B");
+        };
+
         children();
     }
 }
 
-holder(show_rpi = true) show_anchors();
+module case_preview() {
+    center_blok() {
+        position(CENTER + FRONT) 
+        color(front_color)
+        render(convexity = 1) front_block() {
+            position(BOTTOM + BACK) 
+            front_screw_block(anchor = BOTTOM);
+        }
+
+        show_anchors()
+
+        position(BOTTOM + BACK)
+        move(z = wall_thickness, y = -5)
+        holder(show_rpi = true, anchor = BOTTOM + FRONT, spin = 180) show_anchors();
+    }
+}
+
+case_preview();
 
 
 
