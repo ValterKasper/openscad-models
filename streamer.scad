@@ -200,165 +200,300 @@ module case_preview() {
 function get_nut_holder_outer_diameter(bolt_size = 3) =
     get_metric_nut_size(bolt_size) * 1.6;
 
+
+module nut_holder_nut_mask(bolt_size = 3) {
+    bolt_inner_diameter = get_metric_nut_size(bolt_size) + print_clearance * 2;
+    bolt_height = get_metric_nut_thickness(bolt_size) + print_clearance * 2;
+    linear_extrude(bolt_height, center = true)
+    hexagon(id = bolt_inner_diameter);
+
+    screw_diameter = bolt_size + print_clearance * 2;
+    zcyl(d = screw_diameter, h = 20);
+}
+
 // nut -> matica
 // bolt -> skrutka
 // screw -> skrutka
 // Cylinder with hole inside for nut
-module nut_holder(bolt_size = 3) {
-    echo(str("Variable = nut_size ",  get_metric_nut_size(bolt_size)));
-    echo(str("Variable = nut_thickness ",  get_metric_nut_thickness(bolt_size)));
+module nut_holder(anchor, bolt_size = 3) {
+    d = get_nut_holder_outer_diameter(bolt_size);
+    h = 5;
+    attachable(anchor = anchor, d = d, h = h) {
+        cyl(d = get_nut_holder_outer_diameter(bolt_size), h = 5);
 
-    module nut_mask() {
-        bolt_inner_diameter = get_metric_nut_size(bolt_size) + print_clearance * 2;
-        bolt_height = get_metric_nut_thickness(bolt_size) + print_clearance * 2;
-        linear_extrude(bolt_height, center = true)
-        hexagon(id = bolt_inner_diameter);
-
-        screw_diameter = bolt_size + print_clearance * 2;
-        zcyl(d = screw_diameter, h = 20);
-    }
-
-    diff("hole")
-    zcyl(d = get_nut_holder_outer_diameter(bolt_size), h = 5) {
-        tags("hole") nut_mask();
+        children();
     }
 }
 
-module pcb_holder_demo() {
-    nut_holder();
+x_rpi_screw_dist = 58;
+y_rpi_screw_dist = 49;
+rpi_bolt_size = 2.5;
+holder_height = 2;
+hole_distance = 3.5;
+rpi_pcb_thickness = 1;
+rpi_size_x = 85;
+rpi_size_y = 56;
 
-    move(x = struct_size, y = 0)
-    nut_holder();
-
-    move(x = struct_size, y = struct_size)
-    nut_holder();
-
-    move(x = 0, y = struct_size)
-    nut_holder();
-
-    struct_size = 60;
-    path = turtle([
-        "xmove", struct_size,
-        "left", 135,
-        "untilx", struct_size / 2,
-        "jump", [0, 0]
-    ]);
-
-    down(2.5)
-    difference() {
-        linear_extrude(3)
-        shell2d([3, -3], ir = 2, or = 2) {
-            oval_size = 3;
-            yflip_copy(y = struct_size / 2)
-            region([path]);
-
-            xflip_copy(x = 29.5)
-            right(struct_size)
-            rot(90)
-            region([path]);
-        }
-
-        zcyl(r = 4, h = 20);
-    }
-}
-
-x_pi_screw_dist = 58;
-y_pi_screw_dist = 49;
-pi_bolt_size = 2.5;
-
-
-function muv(size, path, radius) = move([
-    size[0] / 2 - radius, 
-    size[1] / 2 - radius, 
-    0], 
-    p = path);
-
-// [A, B, C, D]
+//  Rounding = [A, B, C, D]
 //  B----A
 //  |    |
 //  C----D   
-//  TODO sprav nejak, aby sa dali spravne umiestnovat objekty voci rounded_rect
-function rounded_rect(corner_centers_distances, rounding = [1, 1, 1, 1]) = 
-    let(
-        nut_holder_radius = get_nut_holder_outer_diameter() / 2 - 2,
-        size = corner_centers_distances + [nut_holder_radius * 2, nut_holder_radius * 2],
-        r0 = rect(
-            size = size, 
-            rounding = [
-                nut_holder_radius * rounding[0], 
-                nut_holder_radius * rounding[1], 
-                nut_holder_radius * rounding[2], 
-                nut_holder_radius * rounding[3]
-                ],
-                center = true),
-        outer_rect = muv(size, r0, nut_holder_radius),
-        inner_rect = muv(size, rect(
-            size = [
-                size[0] - nut_holder_radius * 4, 
-                size[1] - nut_holder_radius * 4
-            ], 
-            center = true, 
-            rounding = nut_holder_radius), nut_holder_radius)
-    )
-    difference(outer_rect, inner_rect);
+module rounded_hollow_cube(
+    corner_centers_distances, 
+    height = holder_height, 
+    rounding = [1, 1, 1, 1], 
+    anchor, spin, orient
+) {
+    nut_holder_radius = get_nut_holder_outer_diameter() / 2 - 2;
+    size = corner_centers_distances + [nut_holder_radius * 2, nut_holder_radius * 2];
 
-//  O---O---O
-//  |       |
-//  O---O---O
-//  |   |   |
-//  O---O---O
-//  |       |
-//  O---O---O
-module holder() {
-    module pi_holder() {
-        region(rounded_rect([x_pi_screw_dist, y_pi_screw_dist]));
-        region(rounded_rect([x_pi_screw_dist / 2, y_pi_screw_dist]));
-        move(x = x_pi_screw_dist / 2)
-        region(rounded_rect([x_pi_screw_dist / 2, y_pi_screw_dist]));
-    }
+    function muv(path) = move([
+        0,//size[0] / 2 - nut_holder_radius, 
+        0,//size[1] / 2 - nut_holder_radius, 
+        0], 
+        p = path);
 
-    // top
-    move(y = -20)
-    region(rounded_rect([x_pi_screw_dist, 20]));
+    function rounded_rect(corner_centers_distances, rounding = [1, 1, 1, 1]) = 
+        let(
+            r0 = rect(
+                size = size, 
+                rounding = [
+                    nut_holder_radius * rounding[0], 
+                    nut_holder_radius * rounding[1], 
+                    nut_holder_radius * rounding[2], 
+                    nut_holder_radius * rounding[3]
+                    ],
+                    center = true),
+            outer_rect = muv(r0),
+            inner_rect = muv(rect(
+                size = [
+                    size[0] - nut_holder_radius * 4, 
+                    size[1] - nut_holder_radius * 4
+                ], 
+                center = true, 
+                rounding = nut_holder_radius))
+        )
+        difference(outer_rect, inner_rect);
 
-    // center
-    pi_holder();
+    anchors = [
+        anchorpt("f", [0, -size[1] / 2, 0], FRONT, 0),
+        anchorpt("b", [0, size[1] / 2, 0], BACK, 180),
+        anchorpt("l", [-size[0] / 2, 0, 0], LEFT, -90),
+        anchorpt("r", [size[0] / 2, 0, 0], RIGHT, 90),
+    ];
 
-    // bottom
-    move(y = y_pi_screw_dist)
-    region(rounded_rect([x_pi_screw_dist, 30]));
+    attachable(
+        anchor, 
+        spin, 
+        orient, 
+        [corner_centers_distances[0], corner_centers_distances[1], height],
+        anchors = anchors
+    ) {
+        linear_extrude(height, center = true)
+        region(rounded_rect(corner_centers_distances, rounding));
 
-    // TODO remove
-    move(y = y_pi_screw_dist)
-    union() {
-        oval(r = get_nut_holder_outer_diameter() / 2);
-        move(x = x_pi_screw_dist)
-        oval(r = get_nut_holder_outer_diameter() / 2);
+        children();
     }
 }
 
-holder_height = 2;
+//  Anchors
+//  B----A
+//  |    |
+//  C----D   
+module rpi(anchor, spin, orient) {
+    half_pcb = rpi_pcb_thickness / 2;
 
-linear_extrude(holder_height)
-holder();
+    anchors = [
+        anchorpt("A", [hole_distance + x_rpi_screw_dist, rpi_size_y - hole_distance, -half_pcb], BOTTOM),
+        anchorpt("B", [hole_distance, rpi_size_y - hole_distance, -half_pcb], BOTTOM),
+        anchorpt("C", [hole_distance, hole_distance, -half_pcb], BOTTOM),
+        anchorpt("D", [hole_distance + x_rpi_screw_dist, hole_distance, -half_pcb], BOTTOM),
+    ];
 
-xflip_copy(x = x_pi_screw_dist / 2)
-move(z = holder_height, y = y_pi_screw_dist)
-#zcyl(
-    d = get_metric_bolt_head_size(pi_bolt_size),
-    h = get_metric_bolt_head_height(pi_bolt_size),
-    anchor = BOTTOM) {
+    attachable(
+        anchor, 
+        spin, 
+        orient, 
+        offset = [rpi_size_x / 2, rpi_size_y / 2, 0],
+        [rpi_size_x, rpi_size_y, rpi_pcb_thickness],
+        anchors = anchors
+    ) {
+        color("green", 0.25)
+        linear_extrude(rpi_pcb_thickness, center = true)
+        diff("bolt")
+        rect([rpi_size_x, rpi_size_y]) {
+            tags("bolt") 
+            position(LEFT + BACK)
+            move(x = hole_distance, y = -hole_distance) 
+            oval(d = rpi_bolt_size);
+
+            tags("bolt") 
+            position(LEFT + BACK)
+            move(x = hole_distance + x_rpi_screw_dist, y = -hole_distance) 
+            oval(d = rpi_bolt_size);
+
+            tags("bolt") 
+            position(LEFT + FRONT)
+            move(x = hole_distance, y = hole_distance) 
+            oval(d = rpi_bolt_size);
+
+            tags("bolt") 
+            position(LEFT + FRONT)
+            move(x = hole_distance + x_rpi_screw_dist, y = hole_distance) 
+            oval(d = rpi_bolt_size);
+        }
+
+        children();
+    }
+}
+
+module pcb_snap(anchor = FRONT, spin) {
+    snap_cylinder_d = 1.6;
+    snap_height = holder_height + get_metric_bolt_head_height(rpi_bolt_size) + rpi_pcb_thickness + snap_cylinder_d;
+    snap_width = 8;
+    snap_depth = hole_distance + holder_height;
+    attachable(
+            anchor = anchor, 
+            size = [snap_width, snap_depth, snap_height],
+            offset = [0, snap_depth / 2, 0],
+            spin = spin
+        ) {
+            cube([snap_width, hole_distance, holder_height], anchor = FRONT) {
+                position(BACK + BOTTOM)
+                cube([
+                        snap_width, 
+                        holder_height, 
+                        snap_height
+                    ],
+                    anchor = FRONT + BOTTOM) {
+                        position(FRONT + TOP)
+                        xcyl(d = snap_cylinder_d, h = snap_width, anchor = TOP);
+                    };
+            };
+
+            children();
+        }
+}
+
+//  B---O---O---O---O---A
+//  |   |           |   |
+//  O---X---O---O---O---O
+//  |   |RPI|RPI|RPI|   |
+//  |   |RPI|RPI|RPI|   |
+//  C---O---O---O---O---D
+module holder(anchor, show_rpi = false) {
+    x_side_size = 20;
+    y_top_size = 20;
+    x_distance_to_rpi_end = rpi_size_x - hole_distance * 2 - x_rpi_screw_dist;
+    module knut() {
         zcyl(
-            d = pi_bolt_size - print_clearance * 2,
-            h = 4,
-            anchor = BOTTOM);
-    };
+            d = get_nut_holder_outer_diameter(), 
+            h = holder_height) {
+                position(TOP)
+                zcyl(
+                    d = get_metric_bolt_head_size(rpi_bolt_size),
+                    h = get_metric_bolt_head_height(rpi_bolt_size),
+                    anchor = BOTTOM) {
+                        zcyl(
+                            d = rpi_bolt_size,
+                            h = 4,
+                            anchor = BOTTOM);
+                };
+        };
+    }
 
-echo(str("Variable = get_metric_bolt_head_size ", get_metric_bolt_head_size(pi_bolt_size)));
-echo(str("Variable = get_metric_bolt_head_height ", get_metric_bolt_head_height(pi_bolt_size)));
+    anchors = [
 
+    ];
+    size = [
+        x_rpi_screw_dist + x_distance_to_rpi_end + x_side_size * 2, 
+        y_rpi_screw_dist + y_top_size, 
+        holder_height
+    ];
+    offset = [
+        x_distance_to_rpi_end / 2, 
+        y_top_size / 2, 
+        0
+    ];
+    attachable(anchor = anchor, size = size, offset = offset, anchors = anchors) {
+        diff("nut_mask")
+            rounded_hollow_cube([x_rpi_screw_dist, y_rpi_screw_dist]) {
 
+                // top
+                position(BACK)
+                rounded_hollow_cube([x_rpi_screw_dist, y_top_size], anchor = FRONT) {
+                    position(LEFT)
+                    rounded_hollow_cube([x_side_size, y_top_size], anchor = RIGHT) {
+                        // nut B
+                        position(LEFT + BACK + BOTTOM)
+                        nut_holder(anchor = BOTTOM)
+                        tags("nut_mask") 
+                        nut_holder_nut_mask();
+                    };
 
+                    position(RIGHT)
+                    rounded_hollow_cube([x_side_size + x_distance_to_rpi_end, y_top_size], anchor = LEFT) {
+                        // nut A
+                        position(RIGHT + BACK + BOTTOM)
+                        nut_holder(anchor = BOTTOM)
+                        tags("nut_mask") 
+                        nut_holder_nut_mask();
+                    }
+                };
+
+                // bottom
+                position(LEFT) 
+                rounded_hollow_cube([x_rpi_screw_dist / 2, y_rpi_screw_dist], anchor = LEFT) {
+                    position(LEFT)
+                    rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = RIGHT) {
+                        // nut C
+                        position(LEFT + FRONT + BOTTOM)
+                        nut_holder(anchor = BOTTOM)
+                        tags("nut_mask") 
+                        nut_holder_nut_mask();
+                    };
+
+                };
+                position(RIGHT) 
+                rounded_hollow_cube([x_rpi_screw_dist / 2, y_rpi_screw_dist], anchor = RIGHT)  {
+                
+                    position(RIGHT)
+                    rounded_hollow_cube([x_distance_to_rpi_end, y_rpi_screw_dist], anchor = LEFT) {
+                        position(RIGHT)
+                        rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = LEFT) {
+                            // nut D
+                            position(RIGHT + FRONT + BOTTOM)
+                            nut_holder(anchor = BOTTOM)
+                            tags("nut_mask") 
+                            nut_holder_nut_mask();
+                        };
+                    };
+                };
+
+                // knuts
+                position([LEFT + BACK, RIGHT + BACK])
+                knut();
+
+                // snaps
+                position(BACK)
+                pcb_snap();
+                position(LEFT)
+                move(y = 17)
+                pcb_snap(spin = 90);
+                position(LEFT)
+                move(y = -17)
+                pcb_snap(spin = 90);
+
+                if (show_rpi)
+                    position(BACK + LEFT+ TOP)
+                    move(z = get_metric_bolt_head_height(rpi_bolt_size))
+                    rpi(anchor = "B");
+            };
+        children();
+    }
+}
+
+holder(show_rpi = true) show_anchors();
 
 
 

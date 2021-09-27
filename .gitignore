@@ -1,4 +1,4 @@
 /BOSL/*
 /BOSL2/*
-output/*.stl
+*.stl
 output/*.png
