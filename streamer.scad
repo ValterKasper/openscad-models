@@ -11,7 +11,7 @@ eps = 0.01;
 print_clearance = 0.15;
 wall_thickness = 1.4;
 
-size_multiplier = 45;
+size_multiplier = 35; // 140 x 105 x 35
 // size_multiplier = 20;
 width_relative = 4;
 height_relative = 1;
@@ -31,6 +31,7 @@ front_block_height = height - wall_thickness * 2 - print_clearance * 2;
 shape_width = (front_block_width / paterns_width_count) / full_pattern_count_of_shapes_x;
 shape_height = (front_block_height / paterns_height_count) / full_pattern_count_of_shapes_y;
 shape_height_parts_ratio = 0.6;
+default_bolt_size = 3; // ISO size
 
 module center_blok(anchor = CENTER, spin = 0, orient) {   
     size = [
@@ -185,11 +186,11 @@ module front_block(anchor = CENTER) {
     }
 }
 
-function get_nut_holder_outer_diameter(bolt_size = 3) =
+function get_nut_holder_outer_diameter(bolt_size = default_bolt_size) =
     get_metric_nut_size(bolt_size) * 1.6;
 
 
-module nut_holder_nut_mask(bolt_size = 3) {
+module nut_holder_nut_mask(bolt_size = default_bolt_size) {
     bolt_inner_diameter = get_metric_nut_size(bolt_size) + print_clearance * 2;
     bolt_height = get_metric_nut_thickness(bolt_size) + print_clearance * 2;
     linear_extrude(bolt_height, center = true)
@@ -203,7 +204,7 @@ module nut_holder_nut_mask(bolt_size = 3) {
 // bolt -> skrutka
 // screw -> skrutka
 // Cylinder with hole inside for nut
-module nut_holder(anchor, bolt_size = 3) {
+module nut_holder(anchor, bolt_size = default_bolt_size) {
     d = get_nut_holder_outer_diameter(bolt_size);
     h = 5;
     attachable(anchor = anchor, d = d, h = h) {
@@ -368,10 +369,13 @@ module pcb_snap(anchor = FRONT, spin) {
 //  |   |RPI|RPI|RPI|   |
 //  |   |RPI|RPI|RPI|   |
 //  C---O---O---O---O---D
-module holder(anchor, spin, show_rpi = false) {
-    x_side_size = 20;
-    y_top_size = 55;
+module holder(anchor, spin, show_rpi = false, render = true) {
+    x_side_size = 15;
+    y_top_size = depth - y_rpi_screw_dist - get_nut_holder_outer_diameter();
     x_distance_to_rpi_end = rpi_size_x - hole_distance * 2 - x_rpi_screw_dist;
+    x_holder_size = x_rpi_screw_dist + x_distance_to_rpi_end + x_side_size * 2;
+    y_front_nut_holders_offset = 15;
+    y_back_nut_holders_offset = 15;
     module knut() {
         zcyl(
             d = get_nut_holder_outer_diameter(), 
@@ -388,12 +392,21 @@ module holder(anchor, spin, show_rpi = false) {
                 };
         };
     }
+    y_CD = -y_rpi_screw_dist / 2 + y_back_nut_holders_offset;
+    x_BC = -(x_rpi_screw_dist / 2 + x_side_size);
+    x_AD = x_holder_size + x_BC;
+    y_AB = y_rpi_screw_dist / 2 + y_top_size - y_front_nut_holders_offset;
+    z_bottom = -holder_height / 2;
 
     anchors = [
-
+        anchorpt("case_anchor", [x_distance_to_rpi_end / 2, -y_rpi_screw_dist / 2, z_bottom], BOTTOM),
+        anchorpt("A", [x_AD, y_AB, z_bottom], BOTTOM),
+        anchorpt("B", [x_BC, y_AB, z_bottom], BOTTOM),
+        anchorpt("C", [x_BC, y_CD, z_bottom], BOTTOM),
+        anchorpt("D", [x_AD, y_CD, z_bottom], BOTTOM),
     ];
     size = [
-        x_rpi_screw_dist + x_distance_to_rpi_end + x_side_size * 2, 
+        x_holder_size, 
         y_rpi_screw_dist + y_top_size, 
         holder_height
     ];
@@ -403,6 +416,7 @@ module holder(anchor, spin, show_rpi = false) {
         0
     ];
     attachable(anchor = anchor, spin = spin, size = size, offset = offset, anchors = anchors) {
+        if (render)
         diff("nut_mask")
         recolor("grey")
         rounded_hollow_cube([x_rpi_screw_dist, y_rpi_screw_dist]) {
@@ -413,6 +427,7 @@ module holder(anchor, spin, show_rpi = false) {
                 rounded_hollow_cube([x_side_size, y_top_size], anchor = RIGHT) {
                     // nut B
                     position(LEFT + BACK + BOTTOM)
+                    move(y = -y_back_nut_holders_offset)
                     nut_holder(anchor = BOTTOM)
                     tags("nut_mask") 
                     nut_holder_nut_mask();
@@ -422,6 +437,7 @@ module holder(anchor, spin, show_rpi = false) {
                 rounded_hollow_cube([x_side_size + x_distance_to_rpi_end, y_top_size], anchor = LEFT) {
                     // nut A
                     position(RIGHT + BACK + BOTTOM)
+                    move(y = -y_back_nut_holders_offset)
                     nut_holder(anchor = BOTTOM)
                     tags("nut_mask") 
                     nut_holder_nut_mask();
@@ -435,6 +451,7 @@ module holder(anchor, spin, show_rpi = false) {
                 rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = RIGHT) {
                     // nut C
                     position(LEFT + FRONT + BOTTOM)
+                    move(y = y_front_nut_holders_offset)
                     nut_holder(anchor = BOTTOM)
                     tags("nut_mask") 
                     nut_holder_nut_mask();
@@ -450,6 +467,7 @@ module holder(anchor, spin, show_rpi = false) {
                     rounded_hollow_cube([x_side_size, y_rpi_screw_dist], anchor = LEFT) {
                         // nut D
                         position(RIGHT + FRONT + BOTTOM)
+                        move(y = y_front_nut_holders_offset)
                         nut_holder(anchor = BOTTOM)
                         tags("nut_mask") 
                         nut_holder_nut_mask();
@@ -482,7 +500,23 @@ module holder(anchor, spin, show_rpi = false) {
     }
 }
 
+module foot() {
+    diff("bolt_hole")
+    zcyl(d1 = 8, d2 = 10, h = 3.2, anchor = TOP) {
+        position(BOTTOM)
+        tags("bolt_hole")
+        generic_screw(
+            screwsize = default_bolt_size + print_clearance * 2, 
+            headlen = get_metric_bolt_head_height(default_bolt_size) + print_clearance * 2,
+            screwlen = 6,
+            anchor = "countersunk",
+            orient = BOTTOM);
+    };
+}
+
 module case_preview() {
+    diff("bolt_hole")
+    tags("pos")
     center_blok() {
         position(CENTER + FRONT) 
         color(front_color)
@@ -491,11 +525,26 @@ module case_preview() {
             front_screw_block(anchor = BOTTOM);
         }
 
-        show_anchors()
-
         position(BOTTOM + BACK)
-        move(z = wall_thickness, y = -5)
-        holder(show_rpi = true, anchor = BOTTOM + FRONT, spin = 180) show_anchors();
+        move(z = wall_thickness, y = -3)
+        holder(show_rpi = true, anchor = "case_anchor", spin = 180, render = true) {
+            tags("bolt_hole")
+            position(["A", "B", "C", "D"])
+            zcyl(d = default_bolt_size, h = 20);
+
+            move(z = -wall_thickness)
+            position(["A", "B", "C", "D"])
+            foot();
+
+            move(z = -wall_thickness)
+            position(["A", "B", "C", "D"])
+            recolor("navy")
+            generic_screw(
+                screwsize = default_bolt_size + print_clearance * 2,
+                screwlen = 6,
+                orient = BOTTOM
+            );
+        }
     }
 }
 
