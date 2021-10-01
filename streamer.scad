@@ -1,11 +1,12 @@
 include <BOSL2/std.scad>
 include <BOSL2/hull.scad>
 include <BOSL2/metric_screws.scad>
+include <BOSL2/joiners.scad>
 
-$fn = 12;
+$fn = 36;
 
-center_color = "#777"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
-front_color = "GoldenRod"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
+center_color = "#333"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
+front_color = "white"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
 
 eps = 0.01;
 print_clearance = 0.15;
@@ -42,7 +43,7 @@ module center_blok(anchor = CENTER, spin = 0, orient) {
     attachable(anchor, spin, orient, size) {
         zrot(90)
         yrot(90)
-        linear_extrude(depth, center = true)
+        #linear_extrude(depth, center = true)
         shell2d(-wall_thickness) {
             rect([height, width], rounding = rounding, anchor = CENTER);
         }
@@ -363,6 +364,45 @@ module pcb_snap(anchor = FRONT, spin) {
         }
 }
 
+z_joiners_size = 25;
+y_joiner_backing_size = 5;
+x_joiners_disance = 108 / 2;
+
+module front_back_joiners(anchor, spin, orient, flipped = false) {
+    x_joiner_size = 5;
+
+    module back_joiner(anchor, spin, orient) {
+        $slop = 0.15;
+        joiner(
+            w = x_joiner_size, 
+            l = y_joiner_backing_size, 
+            h = z_joiners_size, 
+            anchor = anchor, 
+            orient = orient,
+            spin = spin);
+    }
+
+    size = [
+        x_joiners_disance * 2 + x_joiner_size, 
+        y_joiner_backing_size * 2, 
+        z_joiners_size
+    ];
+    attachable(size = size, offset = [0, 0, 0], anchor, spin, orient) {
+        xflip_copy()
+        move(x = x_joiners_disance)
+        if (flipped)
+            back_joiner(anchor = CENTER, orient = UP);
+        else
+            back_joiner(anchor = CENTER, orient = DOWN);
+
+        children();
+    }
+}
+
+
+y_holder_back_offset = 7;
+y_joiner_from_back_offset = 0;
+
 //  B---O---O---O---O---A
 //  |   |           |   |
 //  O---X---O---O---O---O
@@ -392,14 +432,19 @@ module holder(anchor, spin, show_rpi = false, render = true) {
                 };
         };
     }
-    y_CD = -y_rpi_screw_dist / 2 + y_back_nut_holders_offset;
+    y_rpi_screw_half_dist = y_rpi_screw_dist / 2;
+    y_CD = -y_rpi_screw_half_dist + y_back_nut_holders_offset;
     x_BC = -(x_rpi_screw_dist / 2 + x_side_size);
     x_AD = x_holder_size + x_BC;
-    y_AB = y_rpi_screw_dist / 2 + y_top_size - y_front_nut_holders_offset;
+    y_AB = y_rpi_screw_half_dist + y_top_size - y_front_nut_holders_offset;
     z_bottom = -holder_height / 2;
+    x_center = x_distance_to_rpi_end / 2;
+    z_front_back_anchor = z_joiners_size / 2 - z_bottom;
 
     anchors = [
-        anchorpt("case_anchor", [x_distance_to_rpi_end / 2, -y_rpi_screw_dist / 2, z_bottom], BOTTOM),
+        anchorpt("case_anchor", [x_center, -y_rpi_screw_half_dist, z_bottom], BOTTOM),
+        anchorpt("back_anchor", [x_center, -y_rpi_screw_half_dist, z_front_back_anchor], FRONT),
+        anchorpt("front_anchor", [x_center, y_rpi_screw_half_dist + y_top_size, z_front_back_anchor], BACK),
         anchorpt("A", [x_AD, y_AB, z_bottom], BOTTOM),
         anchorpt("B", [x_BC, y_AB, z_bottom], BOTTOM),
         anchorpt("C", [x_BC, y_CD, z_bottom], BOTTOM),
@@ -411,7 +456,7 @@ module holder(anchor, spin, show_rpi = false, render = true) {
         holder_height
     ];
     offset = [
-        x_distance_to_rpi_end / 2, 
+        x_center, 
         y_top_size / 2, 
         0
     ];
@@ -475,6 +520,11 @@ module holder(anchor, spin, show_rpi = false, render = true) {
                 };
             };
 
+            // joiners
+            position(FRONT + TOP)
+            move(x = offset[0])
+            front_back_joiners(anchor = BOTTOM, spin = 180);
+
             // knuts
             position([LEFT + BACK, RIGHT + BACK])
             knut();
@@ -490,9 +540,9 @@ module holder(anchor, spin, show_rpi = false, render = true) {
             pcb_snap(spin = 90);
 
             if (show_rpi)
-                recolor("green")
-                position(BACK + LEFT+ TOP)
+                position(BACK + LEFT + TOP)
                 move(z = get_metric_bolt_head_height(rpi_bolt_size))
+                recolor("ForestGreen")
                 rpi(anchor = "B");
         };
 
@@ -514,24 +564,50 @@ module foot() {
     };
 }
 
+module back_part(anchor, spin) {
+    z_offset = -(wall_thickness + print_clearance);
+    size = [
+        width - wall_thickness, y_joiner_backing_size + wall_thickness, height - wall_thickness
+    ];
+    offset = [
+        0, size[1] / 2 - wall_thickness / 2, -z_offset
+    ];
+    attachable(size = size, anchor = anchor, offset = offset, spin = spin) {
+        move(z =  -z_offset)
+        intersection() {
+            cube([front_block_width, wall_thickness, front_block_height], center = true) {
+                position(BACK)
+                move(z = z_offset)
+                front_back_joiners(anchor = FRONT, flipped = true);
+            }
+            center_blok_mask(anchor = CENTER);
+        }
+
+        children();
+    }
+}
+
 module case_preview() {
     diff("bolt_hole")
     tags("pos")
+    recolor(center_color)
     center_blok() {
         position(CENTER + FRONT) 
-        color(front_color)
+        recolor(front_color)
         render(convexity = 1) front_block() {
             position(BOTTOM + BACK) 
             front_screw_block(anchor = BOTTOM);
         }
 
         position(BOTTOM + BACK)
-        move(z = wall_thickness, y = -3)
+        move(z = wall_thickness, y = -y_holder_back_offset)
+        recolor("DarkCyan")
         holder(show_rpi = true, anchor = "case_anchor", spin = 180, render = true) {
             tags("bolt_hole")
             position(["A", "B", "C", "D"])
             zcyl(d = default_bolt_size, h = 20);
 
+            recolor(center_color)
             move(z = -wall_thickness)
             position(["A", "B", "C", "D"])
             foot();
@@ -544,11 +620,12 @@ module case_preview() {
                 screwlen = 6,
                 orient = BOTTOM
             );
+
+            position("back_anchor")
+            recolor("white")
+            back_part(anchor = BACK);   
         }
     }
 }
 
 case_preview();
-
-
-
