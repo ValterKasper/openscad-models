@@ -366,42 +366,46 @@ module pcb_snap(anchor = FRONT, spin) {
 
 z_joiners_size = 25;
 y_joiner_backing_size = 5;
-x_joiners_disance = 108 / 2;
 
-module front_back_joiners(anchor, spin, orient, flipped = false) {
+JOINERS_VISIBILITY_BOTH = 0;
+JOINERS_VISIBILITY_FRONT = 1;
+JOINERS_VISIBILITY_BACK = 2;
+
+module joiners_duo(
+    anchor, 
+    spin, 
+    orient, 
+    visibility = JOINERS_VISIBILITY_BOTH) {
+
     x_joiner_size = 5;
 
-    module back_joiner(anchor, spin, orient) {
-        $slop = 0.15;
-        joiner(
-            w = x_joiner_size, 
-            l = y_joiner_backing_size, 
-            h = z_joiners_size, 
-            anchor = anchor, 
-            orient = orient,
-            spin = spin);
-    }
-
     size = [
-        x_joiners_disance * 2 + x_joiner_size, 
+        x_joiner_size, 
         y_joiner_backing_size * 2, 
         z_joiners_size
     ];
-    attachable(size = size, offset = [0, 0, 0], anchor, spin, orient) {
-        xflip_copy()
-        move(x = x_joiners_disance)
-        if (flipped)
-            back_joiner(anchor = CENTER, orient = UP);
-        else
-            back_joiner(anchor = CENTER, orient = DOWN);
+    attachable(size = size, anchor, spin, orient) {
+        union() {
+            $slop = 0.15;
+            if (visibility != JOINERS_VISIBILITY_BACK) { 
+                joiner(
+                    w = x_joiner_size, 
+                    l = y_joiner_backing_size, 
+                    h = z_joiners_size);
+            }
+            
+            if (visibility != JOINERS_VISIBILITY_FRONT) {
+                xrot(180)
+                joiner(
+                    w = x_joiner_size, 
+                    l = y_joiner_backing_size, 
+                    h = z_joiners_size);
+            }
+        }
 
         children();
     }
 }
-
-
-y_holder_back_offset = 7;
-y_joiner_from_back_offset = 0;
 
 //  B---O---O---O---O---A
 //  |   |           |   |
@@ -409,13 +413,14 @@ y_joiner_from_back_offset = 0;
 //  |   |RPI|RPI|RPI|   |
 //  |   |RPI|RPI|RPI|   |
 //  C---O---O---O---O---D
-module holder(anchor, spin, show_rpi = false, render = true) {
+module holder(anchor = "case_anchor", spin = 180, show_rpi = false, render = true) {
     x_side_size = 15;
     y_top_size = depth - y_rpi_screw_dist - get_nut_holder_outer_diameter();
     x_distance_to_rpi_end = rpi_size_x - hole_distance * 2 - x_rpi_screw_dist;
     x_holder_size = x_rpi_screw_dist + x_distance_to_rpi_end + x_side_size * 2;
     y_front_nut_holders_offset = 15;
     y_back_nut_holders_offset = 15;
+    rpi_bolt_head_height = get_metric_bolt_head_height(rpi_bolt_size);
     module knut() {
         zcyl(
             d = get_nut_holder_outer_diameter(), 
@@ -423,7 +428,7 @@ module holder(anchor, spin, show_rpi = false, render = true) {
                 position(TOP)
                 zcyl(
                     d = get_metric_bolt_head_size(rpi_bolt_size),
-                    h = get_metric_bolt_head_height(rpi_bolt_size),
+                    h = rpi_bolt_head_height,
                     anchor = BOTTOM) {
                         zcyl(
                             d = rpi_bolt_size,
@@ -449,6 +454,7 @@ module holder(anchor, spin, show_rpi = false, render = true) {
         anchorpt("B", [x_BC, y_AB, z_bottom], BOTTOM),
         anchorpt("C", [x_BC, y_CD, z_bottom], BOTTOM),
         anchorpt("D", [x_AD, y_CD, z_bottom], BOTTOM),
+        anchorpt("connectors", [-x_rpi_screw_dist / 2 - hole_distance, -y_rpi_screw_half_dist - hole_distance, -z_bottom + rpi_bolt_head_height], FRONT)
     ];
     size = [
         x_holder_size, 
@@ -500,6 +506,11 @@ module holder(anchor, spin, show_rpi = false, render = true) {
                     nut_holder(anchor = BOTTOM)
                     tags("nut_mask") 
                     nut_holder_nut_mask();
+
+                    // joiner
+                    move(z = holder_height)
+                    position(LEFT + FRONT + BOTTOM)
+                    joiners_duo(anchor = BOTTOM, visibility = JOINERS_VISIBILITY_BACK);
                 };
 
             };
@@ -516,14 +527,14 @@ module holder(anchor, spin, show_rpi = false, render = true) {
                         nut_holder(anchor = BOTTOM)
                         tags("nut_mask") 
                         nut_holder_nut_mask();
+
+                        // joiner
+                        move(z = holder_height)
+                        position(RIGHT + FRONT + BOTTOM)
+                        joiners_duo(anchor = BOTTOM, visibility = JOINERS_VISIBILITY_BACK);
                     };
                 };
             };
-
-            // joiners
-            position(FRONT + TOP)
-            move(x = offset[0])
-            front_back_joiners(anchor = BOTTOM, spin = 180);
 
             // knuts
             position([LEFT + BACK, RIGHT + BACK])
@@ -541,7 +552,7 @@ module holder(anchor, spin, show_rpi = false, render = true) {
 
             if (show_rpi)
                 position(BACK + LEFT + TOP)
-                move(z = get_metric_bolt_head_height(rpi_bolt_size))
+                move(z = rpi_bolt_head_height)
                 recolor("ForestGreen")
                 rpi(anchor = "B");
         };
@@ -564,7 +575,9 @@ module foot() {
     };
 }
 
+
 module back_part(anchor, spin) {
+    x_joiners_disance = 108 / 2;
     z_offset = -(wall_thickness + print_clearance);
     size = [
         width - wall_thickness, y_joiner_backing_size + wall_thickness, height - wall_thickness
@@ -576,9 +589,10 @@ module back_part(anchor, spin) {
         move(z =  -z_offset)
         intersection() {
             cube([front_block_width, wall_thickness, front_block_height], center = true) {
+                xflip_copy()
                 position(BACK)
-                move(z = z_offset)
-                front_back_joiners(anchor = FRONT, flipped = true);
+                move(z = z_offset, x = x_joiners_disance)
+                joiners_duo(anchor = FRONT, visibility = JOINERS_VISIBILITY_FRONT);
             }
             center_blok_mask(anchor = CENTER);
         }
@@ -588,6 +602,8 @@ module back_part(anchor, spin) {
 }
 
 module case_preview() {
+    y_holder_back_offset = 7;
+
     diff("bolt_hole")
     tags("pos")
     recolor(center_color)
@@ -600,32 +616,67 @@ module case_preview() {
         }
 
         position(BOTTOM + BACK)
-        move(z = wall_thickness, y = -y_holder_back_offset)
-        recolor("DarkCyan")
-        holder(show_rpi = true, anchor = "case_anchor", spin = 180, render = true) {
-            tags("bolt_hole")
-            position(["A", "B", "C", "D"])
-            zcyl(d = default_bolt_size, h = 20);
+        move(z = wall_thickness, y = -y_holder_back_offset) {
+            
+            recolor("DarkCyan") 
+            holder(show_rpi = true) {
+                tags("bolt_hole")
+                position(["A", "B", "C", "D"])
+                zcyl(d = default_bolt_size, h = 20);
 
-            recolor(center_color)
-            move(z = -wall_thickness)
-            position(["A", "B", "C", "D"])
-            foot();
+                recolor(center_color)
+                move(z = -wall_thickness)
+                position(["A", "B", "C", "D"])
+                foot();
 
-            move(z = -wall_thickness)
-            position(["A", "B", "C", "D"])
-            recolor("navy")
-            generic_screw(
-                screwsize = default_bolt_size + print_clearance * 2,
-                screwlen = 6,
-                orient = BOTTOM
-            );
+                move(z = -wall_thickness)
+                position(["A", "B", "C", "D"])
+                recolor("navy")
+                generic_screw(
+                    screwsize = default_bolt_size + print_clearance * 2,
+                    screwlen = 6,
+                    orient = BOTTOM
+                );
+            }
 
-            position("back_anchor")
-            recolor("white")
-            back_part(anchor = BACK);   
+            diff("connectors_holes")
+            holder(render = false) {
+                position("back_anchor")
+                recolor("white")
+                back_part(anchor = BACK);
+
+                tags("connectors_holes")
+                position("connectors")
+                connectors_mask();
+            }
         }
     }
 }
 
 case_preview();
+
+module connectors_mask_2d() {
+    hole_clearance = 1;
+    usb_size = [8, 3];
+    toslink_size = [9.5, 10];
+    cinch_diameter = 8;
+
+    // USB power
+    move(y = rpi_pcb_thickness + usb_size[1] / 2)
+    move(x = 10.6)
+    rect([usb_size[0] + hole_clearance, usb_size[1] + hole_clearance], anchor = CENTER);
+
+    // Toslink
+    move(x = 35 + toslink_size[0] / 2, y = 16 + toslink_size[1] / 2)
+    rect([toslink_size[0] + hole_clearance, toslink_size[1] + hole_clearance], anchor = CENTER);
+
+    // Cinch
+    move(x = 50, y = 22)
+    oval(d = cinch_diameter + hole_clearance, anchor = CENTER);
+}
+
+module connectors_mask() {
+    xrot(90)
+    linear_extrude(20, center = true)
+    connectors_mask_2d();
+}
