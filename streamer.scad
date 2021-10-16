@@ -671,7 +671,7 @@ module connectors_mask_2d() {
     rect([toslink_size[0] + hole_clearance, toslink_size[1] + hole_clearance], anchor = CENTER);
 
     // Cinch
-    move(x = 50, y = 22)
+    move(x = 52, y = 22)
     oval(d = cinch_diameter + hole_clearance, anchor = CENTER);
 }
 
@@ -680,3 +680,20 @@ module connectors_mask() {
     linear_extrude(20, center = true)
     connectors_mask_2d();
 }
+
+// TODO
+//  - sprav vacsie diery
+//  - napoj predok na stred
+
+// TODO
+//  - zvaz pouzitie Arduina
+//  - A277D - http://www.teslakatalog.cz/A277D.html
+//  - peak hold
+//      - s AtMega8 - https://320volt.com/en/peak-hold-led-bar-vu-meter-circuit/
+
+// diff("h")
+// cube([65, 1.8, 35])
+// tags("h")
+// position(LEFT + BOTTOM)
+// move(z = 2)
+// #connectors_mask();
