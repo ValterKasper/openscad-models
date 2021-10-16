@@ -1,61 +1,137 @@
 include <BOSL2/std.scad>
 include <BOSL2/hull.scad>
 
+$fn = 48;
+
 wall_thickness = 1.2;
 print_clearance = 0.15;
+slide_clearance = 0.5;
 eps = 0.001;
-
-$fn = 48;
 
 box_width = 100/1.8;
 box_depth = 80/1.8; 
 box_height = 35/1.8; 
 
-bottom_path = rect([box_width, box_depth], rounding = 5, anchor = LEFT) ;
+// box();
+cover_width = 30;
+cover_height = 2;
+cover_length = 40;
+bottom_height = 2;
+bottom_height_b = 0.2;
+top_height = 1.4;
+overhang_x = 2;
+slide_cover_wall_thickness = 2;
+sliding_base = 2;
 
-path = turtle([
-    "jump", [box_width, 0]]
-);
+//  x---x
+//  |   |
+//  x---x   
+//
+//
+//  x---x
+//  |  /
+//  x/   
+module cover_sliding_profile() {
+    sliding_profile_a = turtle([
+        "ymove", cover_height / 2 + print_clearance + sliding_base,
+        "xmove", sliding_base,
+        "ymove", -sliding_base,
+        "xmove", -sliding_base,
+    ]);
 
-module rail(anchor) {
-    diff("diff")
-    rect([wall_thickness * 3 + print_clearance * 2, wall_thickness], anchor = anchor) {
-        position(CENTER) 
-        tags("diff") 
-        rect(
-            [wall_thickness + print_clearance * 2, wall_thickness + eps], 
-            anchor = CENTER);
-    }  
+    sliding_profile_b = turtle([
+        "ymove", -cover_height / 2 - print_clearance - sliding_base,
+        "xymove", [sliding_base, sliding_base],
+        "xmove", -sliding_base,
+    ]);
+
+    region([sliding_profile_a]);
+    region([sliding_profile_b]);
 }
 
-module box() {
-    linear_extrude(box_height) {
-        stroke(bottom_path, closed = true, width = wall_thickness); 
+//  x\
+//  |  \
+//  x---x   
+//
+//
+//  x---x
+//  |  /
+//  x/   
+module separator_sliding_profile() {
+    profile_a = turtle([
+        "ymove", wall_thickness / 2 + print_clearance + sliding_base,
+        "xymove", [sliding_base, -sliding_base],
+        "xmove", -sliding_base,
+    ]);
 
-        stroke(path, width = wall_thickness);
-    }
+    profile_b = turtle([
+        "ymove", -wall_thickness / 2 - print_clearance - sliding_base,
+        "xymove", [sliding_base, sliding_base],
+        "xmove", -sliding_base,
+    ]);
 
-    yflip_copy()
-    linear_extrude(box_height * 0.75) {
-        move(x = box_width / 2, y = box_depth / 2 - wall_thickness / 2)
-        #rail(BACK);
-
-        move(x = box_width / 2, y = wall_thickness / 2.1)
-        rail(FRONT);
-    }
-
-    linear_extrude(wall_thickness)
-    region([bottom_path]);
+    region([profile_a]);
+    region([profile_b]);
 }
 
-module separator() {
-    linear_extrude(wall_thickness)
+
+// todo:
+//  - size should be base on box_SIZE
+//  - add anchors for separators a front panel
+module assortment_box() {
+    cover_slider_heigth = cover_height + print_clearance * 2 + sliding_base * 2;
+    box_inner_size_x = cover_width + slide_clearance * 2;
+    //bottom
+    xflip_copy()
+    cube([box_inner_size_x / 2 + wall_thickness, cover_length, wall_thickness], anchor = RIGHT + FRONT + BOTTOM) {
+        // side
+        position(LEFT + BOTTOM + FRONT) 
+        cube([wall_thickness, cover_length, box_height + cover_slider_heigth]) {
+            // cover slider
+            position(TOP + RIGHT)
+            move(z = -(cover_slider_heigth) / 2)
+            xrot(90)
+            linear_extrude(cover_length, center = true)
+            cover_sliding_profile();
+
+            // separator sliders
+            position(BOTTOM + RIGHT)
+            linear_extrude(box_height + sliding_base)
+            separator_sliding_profile();
+
+            move(y = wall_thickness / 2 + print_clearance + sliding_base)
+            position(BOTTOM + FRONT + RIGHT)
+            linear_extrude(box_height + sliding_base)
+            separator_sliding_profile();
+        }
+
+        // back
+        position(BACK + BOTTOM + LEFT)
+        cube([cover_width / 2 + wall_thickness + slide_clearance, wall_thickness, box_height + cover_slider_heigth], anchor = BACK + BOTTOM + LEFT);
+    };
+}
+
+
+// TODO
+//  - make attachable
+module cover() {
+    move(z = bottom_height + slide_clearance)
+    cube([cover_width, 40, cover_height], anchor = BOTTOM + BACK);
+}
+
+// TODO
+//  - make attachable
+//  - add sliding profile for vertical separator
+module horizontal_separator() {
+    // separator
+    xrot(90)
+    #linear_extrude(wall_thickness)
     rect(
-        [box_depth / 2 - wall_thickness - print_clearance * 2, box_height - wall_thickness - print_clearance], 
+        [box_inner_size_x - print_clearance * 2, box_height - print_clearance * 2], 
         rounding = [2, 2, 0, 0]);
 }
 
-left(50)
-separator();
+// TODO
+//  - make vertival separator
 
-box();
+assortment_box();
