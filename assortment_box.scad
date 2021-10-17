@@ -8,20 +8,25 @@ print_clearance = 0.15;
 slide_clearance = 0.5;
 eps = 0.001;
 
-box_width = 100/1.8;
-box_depth = 80/1.8; 
-box_height = 35/1.8; 
+apartments_count_y = 3;
+apartments_count_x = 3;
 
-// box();
-cover_width = 30;
-cover_height = 2;
-cover_length = 40;
-bottom_height = 2;
-bottom_height_b = 0.2;
-top_height = 1.4;
-overhang_x = 2;
-slide_cover_wall_thickness = 2;
+cover_size_x = 125;
+cover_size_y = 166.6;
+cover_size_z = 2;
+
+box_size_x = cover_size_x + wall_thickness * 2 + slide_clearance * 2;
+box_size_y = cover_size_y + wall_thickness + slide_clearance; 
+box_size_z = 35; 
+
 sliding_base = 2;
+
+separator_slider_heigth = sliding_base * 2 + wall_thickness + print_clearance * 2;
+cover_slider_heigth = cover_size_z + print_clearance * 2 + sliding_base * 2;
+
+box_inner_size_x = cover_size_x + slide_clearance * 2;
+box_inner_size_z = box_size_z - cover_slider_heigth - wall_thickness + sliding_base;
+
 
 //  x---x
 //  |   |
@@ -33,14 +38,14 @@ sliding_base = 2;
 //  x/   
 module cover_sliding_profile() {
     sliding_profile_a = turtle([
-        "ymove", cover_height / 2 + print_clearance + sliding_base,
+        "ymove", cover_size_z / 2 + print_clearance + sliding_base,
         "xmove", sliding_base,
         "ymove", -sliding_base,
         "xmove", -sliding_base,
     ]);
 
     sliding_profile_b = turtle([
-        "ymove", -cover_height / 2 - print_clearance - sliding_base,
+        "ymove", -cover_size_z / 2 - print_clearance - sliding_base,
         "xymove", [sliding_base, sliding_base],
         "xmove", -sliding_base,
     ]);
@@ -57,81 +62,194 @@ module cover_sliding_profile() {
 //  x---x
 //  |  /
 //  x/   
-module separator_sliding_profile() {
-    profile_a = turtle([
-        "ymove", wall_thickness / 2 + print_clearance + sliding_base,
-        "xymove", [sliding_base, -sliding_base],
-        "xmove", -sliding_base,
-    ]);
+module separator_sliding(length, anchor, spin, orient, chamfer_ends = false) {
+    module profile() {
+        profile_a = turtle([
+            "ymove", wall_thickness / 2 + print_clearance + sliding_base,
+            "xymove", [sliding_base, -sliding_base],
+            "xmove", -sliding_base,
+        ]);
 
-    profile_b = turtle([
-        "ymove", -wall_thickness / 2 - print_clearance - sliding_base,
-        "xymove", [sliding_base, sliding_base],
-        "xmove", -sliding_base,
-    ]);
+        profile_b = turtle([
+            "ymove", -wall_thickness / 2 - print_clearance - sliding_base,
+            "xymove", [sliding_base, sliding_base],
+            "xmove", -sliding_base,
+        ]);
 
-    region([profile_a]);
-    region([profile_b]);
-}
+        move(x = -sliding_base / 2) {
+            region([profile_a]);
+            region([profile_b]);
+        }
+    }
 
+    size = [
+        sliding_base,
+        separator_slider_heigth,
+        length
+    ];
 
-// todo:
-//  - size should be base on box_SIZE
-//  - add anchors for separators a front panel
-module assortment_box() {
-    cover_slider_heigth = cover_height + print_clearance * 2 + sliding_base * 2;
-    box_inner_size_x = cover_width + slide_clearance * 2;
-    //bottom
-    xflip_copy()
-    cube([box_inner_size_x / 2 + wall_thickness, cover_length, wall_thickness], anchor = RIGHT + FRONT + BOTTOM) {
-        // side
-        position(LEFT + BOTTOM + FRONT) 
-        cube([wall_thickness, cover_length, box_height + cover_slider_heigth]) {
-            // cover slider
-            position(TOP + RIGHT)
-            move(z = -(cover_slider_heigth) / 2)
-            xrot(90)
-            linear_extrude(cover_length, center = true)
-            cover_sliding_profile();
+    attachable(size = size, anchor = anchor, spin = spin, orient = orient) {
+        union() {
+            difference() {
+                linear_extrude(length, center = true)
+                profile();
 
-            // separator sliders
-            position(BOTTOM + RIGHT)
-            linear_extrude(box_height + sliding_base)
-            separator_sliding_profile();
-
-            move(y = wall_thickness / 2 + print_clearance + sliding_base)
-            position(BOTTOM + FRONT + RIGHT)
-            linear_extrude(box_height + sliding_base)
-            separator_sliding_profile();
+                if (chamfer_ends)
+                    position([TOP + RIGHT, BOTTOM + RIGHT])
+                    chamfer_mask_y(l = separator_slider_heigth , chamfer = sliding_base);
+            }
         }
 
-        // back
-        position(BACK + BOTTOM + LEFT)
-        cube([cover_width / 2 + wall_thickness + slide_clearance, wall_thickness, box_height + cover_slider_heigth], anchor = BACK + BOTTOM + LEFT);
-    };
+        children();
+    }
 }
 
+module separator_full_sliding(anchor, show_top = false) {
+    size = [
+        box_inner_size_x,
+        separator_slider_heigth,
+        box_inner_size_z, 
+    ];
+    attachable(size = size, anchor = anchor) {
+        xflip_copy()
+        move(x = -box_inner_size_x / 2)
+        separator_sliding(box_inner_size_z, anchor = LEFT) {
+            if (show_top) {
+                position(TOP + LEFT)
+                separator_sliding(
+                    length = box_inner_size_x / 2, 
+                    anchor = BOTTOM + LEFT, 
+                    orient = RIGHT);
+            }
 
-// TODO
-//  - make attachable
-module cover() {
-    move(z = bottom_height + slide_clearance)
-    cube([cover_width, 40, cover_height], anchor = BOTTOM + BACK);
+            position(BOTTOM + LEFT)
+            separator_sliding(
+                length = box_inner_size_x / 2, 
+                anchor = TOP + LEFT, 
+                orient = LEFT);
+
+        }
+
+        children();
+    }
 }
 
-// TODO
-//  - make attachable
-//  - add sliding profile for vertical separator
-module horizontal_separator() {
-    // separator
-    xrot(90)
-    #linear_extrude(wall_thickness)
-    rect(
-        [box_inner_size_x - print_clearance * 2, box_height - print_clearance * 2], 
-        rounding = [2, 2, 0, 0]);
+module assortment_box(anchor, spin, orientation) {
+    anchors = [
+        anchorpt("cover", [
+            0, 
+            -box_size_y / 2, 
+            box_size_z / 2 - cover_slider_heigth / 2
+        ], FRONT),
+
+        anchorpt("front_panel", [
+            0, 
+            -box_size_y / 2 + separator_slider_heigth / 2, 
+            -box_size_z / 2 + wall_thickness
+        ], UP),
+
+        anchorpt("back_panel", [
+            0, 
+            box_size_y / 2 - separator_slider_heigth / 2, 
+            -box_size_z / 2 + wall_thickness
+        ], UP),
+    ];
+
+    size = [box_size_x, box_size_y, box_size_z];
+    attachable(size = size, anchor = anchor, anchors = anchors) {
+        //bottom
+        move(z = -box_size_z / 2)
+        xflip_copy()
+        cube([box_size_x / 2, box_size_y, wall_thickness], anchor = RIGHT + BOTTOM) {
+            // side
+            position(LEFT + BOTTOM + FRONT) 
+            cube([wall_thickness, box_size_y, box_size_z]) {
+                // cover slider
+                position(TOP + RIGHT + BACK)
+                move(z = -(cover_slider_heigth) / 2)
+                xrot(90)
+                linear_extrude(box_size_y)
+                cover_sliding_profile();
+
+                // back
+                position(LEFT + TOP + BACK)
+                cube(
+                    [box_size_x / 2, wall_thickness, cover_slider_heigth - sliding_base], 
+                    anchor = TOP + LEFT + BACK);
+            }
+        };
+
+        children();
+    }
 }
 
-// TODO
-//  - make vertival separator
+separtor_chamfer = 2;
 
-assortment_box();
+module separator_x(show_front_sliders = true, show_back_sliders = true) {
+    cuboid(
+        [
+            box_inner_size_x - print_clearance * 2, 
+            wall_thickness, 
+            box_inner_size_z - print_clearance * 2
+        ],
+        chamfer = separtor_chamfer,
+        edges = "Y",
+        anchor = BOTTOM) {
+            slider_lenght = box_inner_size_z * 0.7;
+
+            xcopies(spacing = box_inner_size_x / 3, n = 2) {
+                if (show_back_sliders)
+                    attach(BACK, LEFT)
+                    separator_sliding(length = slider_lenght, chamfer_ends = true);
+
+                if (show_front_sliders)
+                    attach(FRONT, LEFT)
+                    separator_sliding(length = slider_lenght, chamfer_ends = true);
+            }
+        }
+}
+
+// todo fix size
+
+module separator_y() {
+    space_to_divide_y = box_size_y - (wall_thickness + sliding_base * 2) * (apartments_count_y + 1);
+    cuboid(
+        [
+            wall_thickness, 
+            space_to_divide_y / apartments_count_y - print_clearance * 2, 
+            box_inner_size_z - print_clearance * 2
+        ],
+        chamfer = 2,
+        edges = "X",
+        anchor = BOTTOM);
+}
+
+show_cover = false;
+show_separators = true;
+show_box = true;
+
+if (show_box)
+assortment_box() {
+    // cover
+    if (show_cover) {
+        color("silver", 0.4)
+        position("cover")
+        cube([cover_size_x, cover_size_y, cover_size_z], anchor = FRONT);
+    }
+
+    // separators and sliders
+    position("front_panel") {
+        ycopies(n = apartments_count_y + 1, l = box_size_y - separator_slider_heigth, sp = 0) {
+            separator_full_sliding(anchor = BOTTOM);
+            if (show_separators)
+                separator_x();
+        }
+    }
+
+    // back panel separator slider
+    position("back_panel") {
+        separator_full_sliding(anchor = BOTTOM, show_top = true);
+    }
+
+    separator_y();
+}
