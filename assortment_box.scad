@@ -21,54 +21,32 @@ box_size_z = 30;
 
 sliding_base = 2;
 
-separator_slider_heigth = sliding_base * 2 + wall_thickness + print_clearance * 2;
-cover_slider_heigth = cover_size_z + print_clearance * 2 + sliding_base * 2;
+separator_sliding_gap_size = wall_thickness + print_clearance * 2;
+cover_sliding_gap_size = cover_size_z + print_clearance * 2; 
 
 box_inner_size_x = cover_size_x + slide_clearance * 2;
-box_inner_size_z = box_size_z - cover_slider_heigth - wall_thickness + sliding_base;
+box_inner_size_z = box_size_z - slider_height(cover_sliding_gap_size) - wall_thickness + sliding_base;
 
+function slider_height(gap_height) = gap_height + sliding_base * 2;
 
-//  x---x
-//  |   |
-//  x---x   
-//
-//
-//  x---x
-//  |  /
-//  x/   
-module cover_sliding_profile() {
-    sliding_profile_a = turtle([
-        "ymove", cover_size_z / 2 + print_clearance + sliding_base,
-        "xymove", [sliding_base, -sliding_base],
-        "xmove", -sliding_base,
-    ]);
-
-    sliding_profile_b = turtle([
-        "ymove", -cover_size_z / 2 - print_clearance - sliding_base,
-        "xymove", [sliding_base, sliding_base],
-        "xmove", -sliding_base,
-    ]);
-
-    region([sliding_profile_a]);
-    region([sliding_profile_b]);
-}
-
-//  x\
-//  |  \
-//  x---x   
-//
-//
-//  x---x
-//  |  /
-//  x/   
-module separator_sliding(
+module slider(
     length, 
     anchor, 
     spin, 
     orient, 
-    gap_size = wall_thickness + print_clearance * 2, 
+    gap_size = separator_sliding_gap_size, 
     chamfer_ends = false
 ) {
+    /*
+        x\
+        |  \
+        x---x   
+
+
+        x---x
+        |  /
+        x/  
+    */
     module profile() {
         profile_a = turtle([
             "ymove", gap_size / 2 + sliding_base,
@@ -90,7 +68,7 @@ module separator_sliding(
 
     size = [
         sliding_base,
-        separator_slider_heigth,
+        sliding_base * 2 + gap_size,
         length
     ];
 
@@ -102,7 +80,7 @@ module separator_sliding(
 
                 if (chamfer_ends)
                     position([TOP + RIGHT, BOTTOM + RIGHT])
-                    chamfer_mask_y(l = separator_slider_heigth , chamfer = sliding_base);
+                    chamfer_mask_y(l = size[1] , chamfer = sliding_base);
             }
         }
 
@@ -113,23 +91,23 @@ module separator_sliding(
 module separator_full_sliding(anchor, show_top = false) {
     size = [
         box_inner_size_x,
-        separator_slider_heigth,
+        slider_height(separator_sliding_gap_size),
         box_inner_size_z, 
     ];
     attachable(size = size, anchor = anchor) {
         xflip_copy()
         move(x = -box_inner_size_x / 2)
-        separator_sliding(box_inner_size_z, anchor = LEFT) {
+        slider(box_inner_size_z, anchor = LEFT) {
             if (show_top) {
                 position(TOP + LEFT)
-                separator_sliding(
+                slider(
                     length = box_inner_size_x / 2, 
                     anchor = BOTTOM + LEFT, 
                     orient = RIGHT);
             }
 
             position(BOTTOM + LEFT)
-            separator_sliding(
+            slider(
                 length = box_inner_size_x / 2, 
                 anchor = TOP + LEFT, 
                 orient = LEFT);
@@ -145,18 +123,18 @@ module assortment_box(anchor, spin, orientation) {
         anchorpt("cover", [
             0, 
             -box_size_y / 2, 
-            box_size_z / 2 - cover_slider_heigth / 2
+            box_size_z / 2 - slider_height(cover_sliding_gap_size) / 2
         ], FRONT),
 
         anchorpt("front_panel", [
             0, 
-            -box_size_y / 2 + separator_slider_heigth / 2, 
+            -box_size_y / 2 + slider_height(separator_sliding_gap_size) / 2, 
             -box_size_z / 2 + wall_thickness
         ], UP),
 
         anchorpt("back_panel", [
             0, 
-            box_size_y / 2 - separator_slider_heigth / 2, 
+            box_size_y / 2 - slider_height(separator_sliding_gap_size) / 2, 
             -box_size_z / 2 + wall_thickness
         ], UP),
     ];
@@ -171,16 +149,17 @@ module assortment_box(anchor, spin, orientation) {
             position(LEFT + BOTTOM + FRONT) 
             cube([wall_thickness, box_size_y, box_size_z]) {
                 // cover slider
-                position(TOP + RIGHT + BACK)
-                move(z = -(cover_slider_heigth) / 2)
-                xrot(90)
-                linear_extrude(box_size_y)
-                cover_sliding_profile();
+                position(RIGHT + TOP)
+                slider(
+                    gap_size = cover_sliding_gap_size, 
+                    length = box_size_y,
+                    anchor = LEFT + FRONT,
+                    orient = BACK);
 
                 // back
                 position(LEFT + TOP + BACK)
                 cube(
-                    [box_size_x / 2, wall_thickness, cover_slider_heigth - sliding_base], 
+                    [box_size_x / 2, wall_thickness, slider_height(cover_sliding_gap_size) - sliding_base], 
                     anchor = TOP + LEFT + BACK) {
                         position(FRONT + LEFT + TOP)
                         cube(
@@ -212,7 +191,7 @@ module separator_x(show_separator_y = true) {
             xcopies(spacing = box_inner_size_x / 3, n = 2) {
                 if (show_separator_y) {
                     attach(BACK, LEFT)
-                    separator_sliding(length = slider_lenght, gap_size = separtor_y_wall_thickness,  chamfer_ends = true);
+                    slider(length = slider_lenght, gap_size = separtor_y_wall_thickness,  chamfer_ends = true);
 
                     attach(BACK, FRONT)
                     separator_y();
@@ -228,7 +207,7 @@ module separator_y() {
             box_size_y / apartments_count_y - print_clearance * 2 - wall_thickness * 2, 
             box_inner_size_z - print_clearance * 2
         ],
-        chamfer = separtor_chamfer,
+        chamfer = separtor_chamfer * 1.2,
         edges = "X",
         anchor = BOTTOM);
 }
@@ -250,7 +229,7 @@ assortment_box() {
 
     // separators and sliders
     position("front_panel") {
-        ycopies(n = apartments_count_y + 1, l = box_size_y - separator_slider_heigth, sp = 0) {
+        ycopies(n = apartments_count_y + 1, l = box_size_y - slider_height(separator_sliding_gap_size), sp = 0) {
             separator_full_sliding(anchor = BOTTOM);
             if (show_separators)
                 separator_x();
