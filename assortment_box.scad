@@ -7,9 +7,14 @@ wall_thickness = 1.2;
 print_clearance = 0.15;
 cover_slider_clearance_x = 0.5;
 cover_slider_clearance_y = 0.4;
-separator_slider_clearance_y = 0.25;
+separator_slider_clearance_y = 0.3;
 eps = 0.001;
 
+/* apartments_count_y = 2;
+apartments_count_x = 1;
+
+cover_size_x = 50;
+cover_size_y = 50; */
 apartments_count_y = 5;
 apartments_count_x = 3;
 
@@ -192,7 +197,7 @@ module separator_x(show_separator_y = true) {
         anchor = BOTTOM) {
             slider_lenght = box_inner_size_z * 0.7;
 
-            xcopies(spacing = box_inner_size_x / 3, n = 2) {
+            xcopies(spacing = box_inner_size_x / (apartments_count_x), n = apartments_count_x - 1) {
                 if (show_separator_y) {
                     attach(BACK, LEFT)
                     slider(length = slider_lenght, gap_height = separtor_y_wall_thickness,  chamfer_ends = true);
@@ -208,7 +213,7 @@ module separator_y() {
     cuboid(
         [
             separtor_y_wall_thickness, 
-            box_size_y / apartments_count_y - print_clearance * 2 * 1.5 - wall_thickness * 2, 
+            (box_size_y - get_slider_height(separator_slider_gap_size)) / apartments_count_y - separator_slider_gap_size - print_clearance, 
             box_inner_size_z - print_clearance * 2
         ],
         chamfer = separtor_chamfer * 1.2,
@@ -217,10 +222,13 @@ module separator_y() {
 }
 
 show_cover = false;
-show_separators = false;
-show_box = false;
+show_separators = true;
+show_box = true;
+show_separator_y = true;
+show_foots = false;
 
 if (show_box)
+zflip_copy(z = - box_size_z / 2 + wall_thickness / 2)
 assortment_box() {
     // cover
     if (show_cover) {
@@ -233,22 +241,50 @@ assortment_box() {
     position("front_panel") {
         ycopies(n = apartments_count_y + 1, l = box_size_y - get_slider_height(separator_slider_gap_size), sp = 0) {
             separator_full_slider(anchor = BOTTOM);
-            if (show_separators)
-                separator_x();
+            if (show_separators) {
+                separator_x(show_separator_y = show_separator_y && $idx != apartments_count_y);
+                echo(str("Variable = ", $idx));
+            }
 
         }
-
-        // separator_x(show_separator_y = true);
     }
 
     // back panel separator slider
     position("back_panel") {
-        separator_full_slider(anchor = BOTTOM, show_top = true);
+        separator_full_slider(anchor = BOTTOM, show_top = true) {
+            // back panel vertical prismoids
+            width_multiplier = 1.4;
+            xcopies(spacing = box_inner_size_x / (apartments_count_x), n = apartments_count_x - 1)
+            position(BACK)
+            prismoid(
+                size1 = [get_slider_height(separator_slider_gap_size) * width_multiplier, box_inner_size_z], 
+                size2 = [separator_slider_gap_size * width_multiplier, box_inner_size_z], 
+                h = slider_base,
+                anchor = TOP,
+                orient = BACK
+            );
+
+            // back panel bottom prismoid
+            top_width = get_slider_height(separator_slider_gap_size) / 2;
+            bottom_width = get_slider_height(separator_slider_gap_size);
+            move(z = separator_slider_gap_size / 2)
+            position(BACK + BOTTOM)
+            prismoid(
+                size1 = [bottom_width, box_inner_size_x],
+                size2 = [top_width, box_inner_size_x],
+                h = slider_base,
+                shift = [-(top_width - bottom_width) / 2, 0],
+                anchor = TOP,
+                orient = BACK,
+                spin = 90
+            );
+        };
     }
 
-    yflip_copy()
-    xflip_copy()
-    move(x = 5 + wall_thickness + print_clearance, y = -5 - wall_thickness - slider_base - print_clearance)
-    position(BOTTOM + BACK + LEFT)
-    zcyl(h = slider_base, r1 = 3, r2 = 5, anchor = TOP);
+    if (show_foots)
+        yflip_copy()
+        xflip_copy()
+        move(x = 5 + wall_thickness + print_clearance, y = -5 - wall_thickness - slider_base - print_clearance)
+        position(BOTTOM + BACK + LEFT)
+        zcyl(h = slider_base, r1 = 3, r2 = 5, anchor = TOP);
 }
