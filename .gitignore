@@ -1,4 +1,5 @@
 /BOSL/*
 /BOSL2/*
 *.stl
+*.3mf
 output/*.png

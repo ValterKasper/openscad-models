@@ -1,32 +1,42 @@
 include <BOSL2/std.scad>
 include <BOSL2/hull.scad>
 
-$fn = 48;
+/* [Shown model] */
+// Type
+model_type = "box"; // ["box", "panel", "separator"]
 
-wall_thickness = 1.2;
-print_clearance = 0.15;
-cover_slider_clearance_x = 0.5;
-cover_slider_clearance_y = 0.4;
-separator_slider_clearance_y = 0.3;
-eps = 0.001;
-
-/* apartments_count_y = 2;
-apartments_count_x = 1;
-
-cover_size_x = 50;
-cover_size_y = 50; */
+/* [Apartments] */
 apartments_count_y = 5;
 apartments_count_x = 3;
 
+/* [Cover] */
+// [mm]
 cover_size_x = 125;
+// [mm]
 cover_size_y = 166.6;
+// [mm]
 cover_size_z = 2;
+
+/* [Box] */
+box_is_double_sided = true;
+box_show_separators = true;
+// [mm]
+box_size_z = 30; 
+
+module __Customizer_Limit__ () {}
+/* [Clearences & others] */
+box_show_cover = false;
+wall_thickness = 1.2;
+print_clearance = 0.15;
+slider_base = 2;
+cover_slider_clearance_x = 0.5;
+cover_slider_clearance_y = 0.4;
+separator_slider_clearance_y = 0.3;
+$fn = 48;
+eps = 0.001;
 
 box_size_x = cover_size_x + wall_thickness * 2 + cover_slider_clearance_x * 2;
 box_size_y = cover_size_y + wall_thickness + cover_slider_clearance_x; 
-box_size_z = 30; 
-
-slider_base = 2;
 
 separator_slider_gap_size = wall_thickness + separator_slider_clearance_y * 2;
 cover_slider_gap_size = cover_size_z + cover_slider_clearance_y * 2; 
@@ -221,8 +231,8 @@ module separator_x(show_separator_y = true) {
         }
 }
 
-module assortment_box(double_sided = true, show_separators = true, show_cover = false) {
-    if (double_sided) {
+module assortment_box() {
+    if (box_is_double_sided) {
         zflip_copy(z = - box_size_z / 2 + wall_thickness / 2)
         assortment_box_single_side();
     } else {
@@ -232,7 +242,7 @@ module assortment_box(double_sided = true, show_separators = true, show_cover = 
     module assortment_box_single_side() {
         _assortment_box_base() {
                 // cover
-                if (show_cover) {
+                if (box_show_cover) {
                     color("silver", 0.4)
                     position("cover")
                     cube([cover_size_x, cover_size_y, cover_size_z], anchor = FRONT);
@@ -242,7 +252,7 @@ module assortment_box(double_sided = true, show_separators = true, show_cover = 
                 position("front_panel") {
                     ycopies(n = apartments_count_y + 1, l = box_size_y - get_slider_height(separator_slider_gap_size), sp = 0) {
                         _separator_full_slider(anchor = BOTTOM);
-                        if (show_separators) {
+                        if (box_show_separators) {
                             separator_x(show_separator_y = $idx != apartments_count_y);
                         }
 
@@ -281,7 +291,7 @@ module assortment_box(double_sided = true, show_separators = true, show_cover = 
                     };
                 }
 
-                if (!double_sided)
+                if (!box_is_double_sided)
                     yflip_copy()
                     xflip_copy()
                     move(x = 5 + wall_thickness + print_clearance, y = -5 - wall_thickness - slider_base - print_clearance)
@@ -289,5 +299,12 @@ module assortment_box(double_sided = true, show_separators = true, show_cover = 
                     zcyl(h = slider_base, r1 = 3, r2 = 5, anchor = TOP);
         }
     }
+}
 
+if (model_type == "box") {
+    assortment_box();
+} else if (model_type == "separator") {
+    separator_x();
+} else if (model_type == "panel") {
+    separator_x(show_separator_y = false);
 }

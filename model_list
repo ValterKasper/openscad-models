@@ -1,5 +1,5 @@
 continuous_track
-assortment_box_assembly_single_sided
-assortment_box_assembly_double_sided
-assortment_box_separator_xy
-assortment_box_separator_x
+assortment_box box_single
+assortment_box box_double
+assortment_box separator
+assortment_box panel

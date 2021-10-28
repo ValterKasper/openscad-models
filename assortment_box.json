@@ -1,0 +1,50 @@
+{
+    "parameterSets": {
+        "box_double": {
+            "apartments_count_x": "3",
+            "apartments_count_y": "5",
+            "box_is_double_sided": "true",
+            "box_show_separators": "true",
+            "box_size_z": "30",
+            "cover_size_x": "125",
+            "cover_size_y": "166.6",
+            "cover_size_z": "2",
+            "model_type": "box"
+        },
+        "box_single": {
+            "apartments_count_x": "3",
+            "apartments_count_y": "5",
+            "box_is_double_sided": "false",
+            "box_show_separators": "true",
+            "box_size_z": "30",
+            "cover_size_x": "125",
+            "cover_size_y": "166.6",
+            "cover_size_z": "2",
+            "model_type": "box"
+        },
+        "panel": {
+            "apartments_count_x": "3",
+            "apartments_count_y": "5",
+            "box_is_double_sided": "false",
+            "box_show_separators": "true",
+            "box_size_z": "30",
+            "cover_size_x": "125",
+            "cover_size_y": "166.6",
+            "cover_size_z": "2",
+            "model_type": "panel"
+        },
+        "separator": {
+            "apartments_count_x": "3",
+            "apartments_count_y": "5",
+            "box_is_double_sided": "false",
+            "box_show_separators": "true",
+            "box_size_z": "30",
+            "cover_size_x": "125",
+            "cover_size_y": "166.6",
+            "cover_size_z": "2",
+            "model_type": "separator"
+        }
+    },
+    "parameterSets": "",
+    "fileFormatVersion": "1"
+}
