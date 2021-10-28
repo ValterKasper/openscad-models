@@ -1,0 +1,18 @@
+{
+    "parameterSets": {
+        "default": {
+            "$fn": "24",
+            "c": "0.01",
+            "holder_height": "3",
+            "hole_radius": "2",
+            "hole_thickness": "1",
+            "overhang_height": "3",
+            "print_clearance": "0.2",
+            "remaining_track_extension": "4",
+            "track_thickness": "1.8",
+            "track_width": "10"
+        }
+    },
+    "parameterSets": "",
+    "fileFormatVersion": "1"
+}

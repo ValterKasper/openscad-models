@@ -3,6 +3,9 @@ include <BOSL2/hull.scad>
 include <BOSL2/metric_screws.scad>
 include <BOSL2/joiners.scad>
 
+model_type = "assembly"; // ["front_panel", "pcb_holder", "body", "assembly"]
+
+module __Customizer_Limit__ () {}
 $fn = 36;
 
 center_color = "#333"; // ["white", "#333", "#777", "Gold", "GoldenRod"]
@@ -43,7 +46,7 @@ module center_blok(anchor = CENTER, spin = 0, orient) {
     attachable(anchor, spin, orient, size) {
         zrot(90)
         yrot(90)
-        #linear_extrude(depth, center = true)
+        linear_extrude(depth, center = true)
         shell2d(-wall_thickness) {
             rect([height, width], rounding = rounding, anchor = CENTER);
         }
@@ -156,7 +159,7 @@ module front_screw_block(anchor = CENTER) {
                 "jump", [0, 0] 
             ]);
             linear_extrude(wall_thickness, center = true)
-            move(y = -block_depth / 2)
+            move(y = -block_depth / 2 + wall_thickness)
             region([path]);   
 
             move(y = block_depth / 5)
@@ -266,10 +269,10 @@ module rounded_hollow_cube(
         difference(outer_rect, inner_rect);
 
     anchors = [
-        anchorpt("f", [0, -size[1] / 2, 0], FRONT, 0),
-        anchorpt("b", [0, size[1] / 2, 0], BACK, 180),
-        anchorpt("l", [-size[0] / 2, 0, 0], LEFT, -90),
-        anchorpt("r", [size[0] / 2, 0, 0], RIGHT, 90),
+        named_anchor("f", [0, -size[1] / 2, 0], FRONT, 0),
+        named_anchor("b", [0, size[1] / 2, 0], BACK, 180),
+        named_anchor("l", [-size[0] / 2, 0, 0], LEFT, -90),
+        named_anchor("r", [size[0] / 2, 0, 0], RIGHT, 90),
     ];
 
     attachable(
@@ -294,10 +297,10 @@ module rpi(anchor, spin, orient) {
     half_pcb = rpi_pcb_thickness / 2;
 
     anchors = [
-        anchorpt("A", [hole_distance + x_rpi_screw_dist, rpi_size_y - hole_distance, -half_pcb], BOTTOM),
-        anchorpt("B", [hole_distance, rpi_size_y - hole_distance, -half_pcb], BOTTOM),
-        anchorpt("C", [hole_distance, hole_distance, -half_pcb], BOTTOM),
-        anchorpt("D", [hole_distance + x_rpi_screw_dist, hole_distance, -half_pcb], BOTTOM),
+        named_anchor("A", [hole_distance + x_rpi_screw_dist, rpi_size_y - hole_distance, -half_pcb], BOTTOM),
+        named_anchor("B", [hole_distance, rpi_size_y - hole_distance, -half_pcb], BOTTOM),
+        named_anchor("C", [hole_distance, hole_distance, -half_pcb], BOTTOM),
+        named_anchor("D", [hole_distance + x_rpi_screw_dist, hole_distance, -half_pcb], BOTTOM),
     ];
 
     attachable(
@@ -447,14 +450,14 @@ module holder(anchor = "case_anchor", spin = 180, show_rpi = false, render = tru
     z_front_back_anchor = z_joiners_size / 2 - z_bottom;
 
     anchors = [
-        anchorpt("case_anchor", [x_center, -y_rpi_screw_half_dist, z_bottom], BOTTOM),
-        anchorpt("back_anchor", [x_center, -y_rpi_screw_half_dist, z_front_back_anchor], FRONT),
-        anchorpt("front_anchor", [x_center, y_rpi_screw_half_dist + y_top_size, z_front_back_anchor], BACK),
-        anchorpt("A", [x_AD, y_AB, z_bottom], BOTTOM),
-        anchorpt("B", [x_BC, y_AB, z_bottom], BOTTOM),
-        anchorpt("C", [x_BC, y_CD, z_bottom], BOTTOM),
-        anchorpt("D", [x_AD, y_CD, z_bottom], BOTTOM),
-        anchorpt("connectors", [-x_rpi_screw_dist / 2 - hole_distance, -y_rpi_screw_half_dist - hole_distance, -z_bottom + rpi_bolt_head_height], FRONT)
+        named_anchor("case_anchor", [x_center, -y_rpi_screw_half_dist, z_bottom], BOTTOM),
+        named_anchor("back_anchor", [x_center, -y_rpi_screw_half_dist, z_front_back_anchor], FRONT),
+        named_anchor("front_anchor", [x_center, y_rpi_screw_half_dist + y_top_size, z_front_back_anchor], BACK),
+        named_anchor("A", [x_AD, y_AB, z_bottom], BOTTOM),
+        named_anchor("B", [x_BC, y_AB, z_bottom], BOTTOM),
+        named_anchor("C", [x_BC, y_CD, z_bottom], BOTTOM),
+        named_anchor("D", [x_AD, y_CD, z_bottom], BOTTOM),
+        named_anchor("connectors", [-x_rpi_screw_dist / 2 - hole_distance, -y_rpi_screw_half_dist - hole_distance, -z_bottom + rpi_bolt_head_height], FRONT)
     ];
     size = [
         x_holder_size, 
@@ -601,7 +604,7 @@ module back_part(anchor, spin) {
     }
 }
 
-module case_preview() {
+module case_preview(show_holder = true) {
     y_holder_back_offset = 7;
 
     diff("bolt_hole")
@@ -610,7 +613,7 @@ module case_preview() {
     center_blok() {
         position(CENTER + FRONT) 
         recolor(front_color)
-        render(convexity = 1) front_block() {
+        render(convexity = 2) front_block() {
             position(BOTTOM + BACK) 
             front_screw_block(anchor = BOTTOM);
         }
@@ -618,6 +621,7 @@ module case_preview() {
         position(BOTTOM + BACK)
         move(z = wall_thickness, y = -y_holder_back_offset) {
             
+            if (show_holder)
             recolor("DarkCyan") 
             holder(show_rpi = true) {
                 tags("bolt_hole")
@@ -653,8 +657,6 @@ module case_preview() {
     }
 }
 
-case_preview();
-
 module connectors_mask_2d() {
     hole_clearance = 1;
     usb_size = [8, 3];
@@ -679,6 +681,16 @@ module connectors_mask() {
     xrot(90)
     linear_extrude(20, center = true)
     connectors_mask_2d();
+}
+
+if (model_type == "assembly") {
+    case_preview(show_holder = false);
+} else if (model_type == "body") {
+    center_blok();
+} else if (model_type == "front_panel") {
+    render(convexity = 2) front_block();
+} else if (model_type == "pcb_holder") {
+    holder();
 }
 
 // TODO

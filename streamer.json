@@ -1,0 +1,18 @@
+{
+    "parameterSets": {
+        "assembly": {
+            "model_type": "assembly"
+        },
+        "front_panel": {
+            "model_type": "front_panel"
+        },
+        "body": {
+            "model_type": "body"
+        },
+        "pcb_holder": {
+            "model_type": "pcb_holder"
+        }
+    },
+    "parameterSets": "",
+    "fileFormatVersion": "1"
+}

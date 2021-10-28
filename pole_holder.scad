@@ -2,7 +2,7 @@ include <BOSL2/std.scad>
 include <BOSL2/rounding.scad>
 include <BOSL2/screws.scad>
 
-$fn = 24;
+$fn = 48;
 
 eps = 0.01;
 height = 30;

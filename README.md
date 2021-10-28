@@ -1,9 +1,11 @@
 # OpenSCAD models
 
 
-| ![preview 1](images/continuous_track.png) | ![preview 1](images/pole_holder.png) | ![preview 1](images/todo.png) |
+| ![Tracs](images/continuous_track.png) | ![Pole holder](images/pole_holder_default.png) | ![Double box](images/assortment_box_box_double.png) |
 | --- | --- | --- |
-| Continuous tracks, that can be printed in place. | Pole holder | TODO |
+| Continuous tracks, that can be printed in place. | Pole holder | Doublesided assortment box |
+| ![Streamer](images/streamer_pcb_holder.png) | ![Streamer](images/streamer_assembly.png) | |
+| Pcb holder of music streamer |  Preview of music streamer | |
 
 ## Usage
 

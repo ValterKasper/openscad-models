@@ -3,7 +3,7 @@ include <BOSL2/hull.scad>
 
 
 
-$fn = 24;
+$fn = 12;
 c = 0.01;
 
 // mm
@@ -154,9 +154,9 @@ module track_piece_internal(left = true, right = true) {
 
 module track_piece(left = true, right = true, r = holder_radius, h = track_height, anchor=CENTER, spin=0, orient=UP) {
     anchors = [
-        anchorpt("end_top", [-left_side_offset, 0, track_half_height], TOP, 0),
-        anchorpt("end_bottom", [-left_side_offset, 0, -track_half_height], BOTTOM, 0),
-        anchorpt("end_center", [-left_side_offset, 0, 0], TOP, 0)
+        named_anchor("end_top", [-left_side_offset, 0, track_half_height], TOP, 0),
+        named_anchor("end_bottom", [-left_side_offset, 0, -track_half_height], BOTTOM, 0),
+        named_anchor("end_center", [-left_side_offset, 0, 0], TOP, 0)
     ];
     attachable(anchor, spin, orient, r=r, l=h, anchors=anchors) {
         up(track_half_height)

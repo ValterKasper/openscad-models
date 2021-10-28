@@ -97,7 +97,7 @@ module _slider(
 
                 if (chamfer_ends)
                     position([TOP + RIGHT, BOTTOM + RIGHT])
-                    chamfer_mask_y(l = size[1] , chamfer = slider_base);
+                    chamfer_edge_mask(l = size[1], chamfer = slider_base, orient = BACK);
             }
         }
 
@@ -139,19 +139,19 @@ module _separator_full_slider(anchor, show_top = false) {
 
 module _assortment_box_base(anchor, spin, orientation) {
     anchors = [
-        anchorpt("cover", [
+        named_anchor("cover", [
             0, 
             -box_size_y / 2, 
             box_size_z / 2 - get_slider_height(cover_slider_gap_size) / 2
         ], FRONT),
 
-        anchorpt("front_panel", [
+        named_anchor("front_panel", [
             0, 
             -box_size_y / 2 + get_slider_height(separator_slider_gap_size) / 2, 
             -box_size_z / 2 + wall_thickness
         ], UP),
 
-        anchorpt("back_panel", [
+        named_anchor("back_panel", [
             0, 
             box_size_y / 2 - get_slider_height(separator_slider_gap_size) / 2, 
             -box_size_z / 2 + wall_thickness

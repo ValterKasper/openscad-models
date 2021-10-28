@@ -1,5 +1,10 @@
-continuous_track
+continuous_track default
 assortment_box box_single
 assortment_box box_double
 assortment_box separator
 assortment_box panel
+pole_holder default
+streamer assembly
+streamer pcb_holder
+streamer front_panel
+

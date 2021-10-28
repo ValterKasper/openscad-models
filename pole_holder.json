@@ -1,0 +1,12 @@
+{
+    "parameterSets": {
+        "default": {
+            "$fn": "24",
+            "eps": "0.01",
+            "height": "30"
+        }
+    },
+    "fileFormatVersion": "1",
+    "parameterSets": "",
+    "parameterSets": ""
+}
