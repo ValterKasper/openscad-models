@@ -49,7 +49,7 @@ def process_command(scad_file_name, extension, parameter_set = None):
         sys.exit(2)
 
     print(f"""{target_file_name}.{extension}:""")
-    # os.system(textwrap.dedent(command))
+    os.system(textwrap.dedent(command))
     print("")
 
 def remove_extension(file_name):
