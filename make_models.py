@@ -49,7 +49,7 @@ def process_command(scad_file_name, extension, parameter_set = None):
         sys.exit(2)
 
     print(f"""{target_file_name}.{extension}:""")
-    os.system(textwrap.dedent(command))
+    # os.system(textwrap.dedent(command))
     print("")
 
 def remove_extension(file_name):
@@ -96,13 +96,15 @@ def main(argv):
                 continue
 
             line_parts = line.split()
-            source_file_name = remove_extension(line_parts[0])
 
-            if (len(line_parts) == 2):
-                parameter_set = line_parts[1]
-            else:
+            if (len(line_parts) == 0):
+                continue
+            elif (len(line_parts) == 1):
                 parameter_set = None
+            else:
+                parameter_set = line_parts[1]
 
+            source_file_name = remove_extension(line_parts[0])
             process_command(source_file_name, extension, parameter_set)
     elif (scad_file_name != None and extension != None):
         process_command(remove_extension(scad_file_name), extension, parameter_set)
