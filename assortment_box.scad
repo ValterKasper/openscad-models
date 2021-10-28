@@ -36,7 +36,7 @@ box_inner_size_z = box_size_z - get_slider_height(cover_slider_gap_size) - wall_
 
 function get_slider_height(gap_height) = gap_height + slider_base * 2;
 
-module slider(
+module _slider(
     length, 
     anchor, 
     spin, 
@@ -95,7 +95,7 @@ module slider(
     }
 }
 
-module separator_full_slider(anchor, show_top = false) {
+module _separator_full_slider(anchor, show_top = false) {
     size = [
         box_inner_size_x,
         get_slider_height(separator_slider_gap_size),
@@ -104,10 +104,10 @@ module separator_full_slider(anchor, show_top = false) {
     attachable(size = size, anchor = anchor) {
         xflip_copy()
         move(x = -box_inner_size_x / 2)
-        slider(box_inner_size_z, gap_height = separator_slider_gap_size,  anchor = LEFT) {
+        _slider(box_inner_size_z, gap_height = separator_slider_gap_size,  anchor = LEFT) {
             if (show_top) {
                 position(TOP + LEFT)
-                slider(
+                _slider(
                     length = box_inner_size_x / 2, 
                     gap_height = separator_slider_gap_size,
                     anchor = BOTTOM + LEFT, 
@@ -115,7 +115,7 @@ module separator_full_slider(anchor, show_top = false) {
             }
 
             position(BOTTOM + LEFT)
-            slider(
+            _slider(
                 length = box_inner_size_x / 2, 
                 gap_height = separator_slider_gap_size,
                 anchor = TOP + LEFT, 
@@ -127,7 +127,7 @@ module separator_full_slider(anchor, show_top = false) {
     }
 }
 
-module assortment_box(anchor, spin, orientation) {
+module _assortment_box_base(anchor, spin, orientation) {
     anchors = [
         anchorpt("cover", [
             0, 
@@ -157,9 +157,9 @@ module assortment_box(anchor, spin, orientation) {
             // side
             position(LEFT + BOTTOM + FRONT) 
             cube([wall_thickness, box_size_y, box_size_z]) {
-                // cover slider
+                // cover _slider
                 position(RIGHT + TOP)
-                slider(
+                _slider(
                     gap_height = cover_slider_gap_size, 
                     length = box_size_y,
                     anchor = LEFT + FRONT,
@@ -182,10 +182,22 @@ module assortment_box(anchor, spin, orientation) {
     }
 }
 
-separtor_chamfer = 2 + print_clearance;
-separtor_y_wall_thickness = wall_thickness * 1.5;
-
 module separator_x(show_separator_y = true) {
+    separtor_chamfer = 2 + print_clearance;
+    separtor_y_wall_thickness = wall_thickness * 1.5;
+
+    module separator_y() {
+        cuboid(
+            [
+                separtor_y_wall_thickness, 
+                (box_size_y - get_slider_height(separator_slider_gap_size)) / apartments_count_y - separator_slider_gap_size - print_clearance, 
+                box_inner_size_z - print_clearance * 2
+            ],
+            chamfer = separtor_chamfer * 1.2,
+            edges = "X",
+            anchor = BOTTOM);
+    }
+
     cuboid(
         [
             box_inner_size_x - print_clearance * 2, 
@@ -200,7 +212,7 @@ module separator_x(show_separator_y = true) {
             xcopies(spacing = box_inner_size_x / (apartments_count_x), n = apartments_count_x - 1) {
                 if (show_separator_y) {
                     attach(BACK, LEFT)
-                    slider(length = slider_lenght, gap_height = separtor_y_wall_thickness,  chamfer_ends = true);
+                    _slider(length = slider_lenght, gap_height = separtor_y_wall_thickness,  chamfer_ends = true);
 
                     attach(BACK, FRONT)
                     separator_y();
@@ -209,82 +221,73 @@ module separator_x(show_separator_y = true) {
         }
 }
 
-module separator_y() {
-    cuboid(
-        [
-            separtor_y_wall_thickness, 
-            (box_size_y - get_slider_height(separator_slider_gap_size)) / apartments_count_y - separator_slider_gap_size - print_clearance, 
-            box_inner_size_z - print_clearance * 2
-        ],
-        chamfer = separtor_chamfer * 1.2,
-        edges = "X",
-        anchor = BOTTOM);
-}
-
-show_cover = false;
-show_separators = true;
-show_box = true;
-show_separator_y = true;
-show_foots = false;
-
-if (show_box)
-zflip_copy(z = - box_size_z / 2 + wall_thickness / 2)
-assortment_box() {
-    // cover
-    if (show_cover) {
-        color("silver", 0.4)
-        position("cover")
-        cube([cover_size_x, cover_size_y, cover_size_z], anchor = FRONT);
+module assortment_box(double_sided = true, show_separators = true, show_cover = false) {
+    if (double_sided) {
+        zflip_copy(z = - box_size_z / 2 + wall_thickness / 2)
+        assortment_box_single_side();
+    } else {
+        assortment_box_single_side();
     }
 
-    // separators and sliders
-    position("front_panel") {
-        ycopies(n = apartments_count_y + 1, l = box_size_y - get_slider_height(separator_slider_gap_size), sp = 0) {
-            separator_full_slider(anchor = BOTTOM);
-            if (show_separators) {
-                separator_x(show_separator_y = show_separator_y && $idx != apartments_count_y);
-                echo(str("Variable = ", $idx));
-            }
+    module assortment_box_single_side() {
+        _assortment_box_base() {
+                // cover
+                if (show_cover) {
+                    color("silver", 0.4)
+                    position("cover")
+                    cube([cover_size_x, cover_size_y, cover_size_z], anchor = FRONT);
+                }
 
+                // separators and sliders
+                position("front_panel") {
+                    ycopies(n = apartments_count_y + 1, l = box_size_y - get_slider_height(separator_slider_gap_size), sp = 0) {
+                        _separator_full_slider(anchor = BOTTOM);
+                        if (show_separators) {
+                            separator_x(show_separator_y = $idx != apartments_count_y);
+                        }
+
+                    }
+                }
+
+                // back panel separator _slider
+                position("back_panel") {
+                    _separator_full_slider(anchor = BOTTOM, show_top = true) {
+                        // back panel vertical prismoids
+                        width_multiplier = 1.4;
+                        xcopies(spacing = box_inner_size_x / (apartments_count_x), n = apartments_count_x - 1)
+                        position(BACK)
+                        prismoid(
+                            size1 = [get_slider_height(separator_slider_gap_size) * width_multiplier, box_inner_size_z], 
+                            size2 = [separator_slider_gap_size * width_multiplier, box_inner_size_z], 
+                            h = slider_base,
+                            anchor = TOP,
+                            orient = BACK
+                        );
+
+                        // back panel bottom prismoid
+                        top_width = get_slider_height(separator_slider_gap_size) / 2;
+                        bottom_width = get_slider_height(separator_slider_gap_size);
+                        move(z = separator_slider_gap_size / 2)
+                        position(BACK + BOTTOM)
+                        prismoid(
+                            size1 = [bottom_width, box_inner_size_x],
+                            size2 = [top_width, box_inner_size_x],
+                            h = slider_base,
+                            shift = [-(top_width - bottom_width) / 2, 0],
+                            anchor = TOP,
+                            orient = BACK,
+                            spin = 90
+                        );
+                    };
+                }
+
+                if (!double_sided)
+                    yflip_copy()
+                    xflip_copy()
+                    move(x = 5 + wall_thickness + print_clearance, y = -5 - wall_thickness - slider_base - print_clearance)
+                    position(BOTTOM + BACK + LEFT)
+                    zcyl(h = slider_base, r1 = 3, r2 = 5, anchor = TOP);
         }
     }
 
-    // back panel separator slider
-    position("back_panel") {
-        separator_full_slider(anchor = BOTTOM, show_top = true) {
-            // back panel vertical prismoids
-            width_multiplier = 1.4;
-            xcopies(spacing = box_inner_size_x / (apartments_count_x), n = apartments_count_x - 1)
-            position(BACK)
-            prismoid(
-                size1 = [get_slider_height(separator_slider_gap_size) * width_multiplier, box_inner_size_z], 
-                size2 = [separator_slider_gap_size * width_multiplier, box_inner_size_z], 
-                h = slider_base,
-                anchor = TOP,
-                orient = BACK
-            );
-
-            // back panel bottom prismoid
-            top_width = get_slider_height(separator_slider_gap_size) / 2;
-            bottom_width = get_slider_height(separator_slider_gap_size);
-            move(z = separator_slider_gap_size / 2)
-            position(BACK + BOTTOM)
-            prismoid(
-                size1 = [bottom_width, box_inner_size_x],
-                size2 = [top_width, box_inner_size_x],
-                h = slider_base,
-                shift = [-(top_width - bottom_width) / 2, 0],
-                anchor = TOP,
-                orient = BACK,
-                spin = 90
-            );
-        };
-    }
-
-    if (show_foots)
-        yflip_copy()
-        xflip_copy()
-        move(x = 5 + wall_thickness + print_clearance, y = -5 - wall_thickness - slider_base - print_clearance)
-        position(BOTTOM + BACK + LEFT)
-        zcyl(h = slider_base, r1 = 3, r2 = 5, anchor = TOP);
 }
