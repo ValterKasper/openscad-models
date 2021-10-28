@@ -29,10 +29,10 @@ jobs:
           sudo apt-get install xvfb
           
       - name: Build geometry
-        run: ./make_models.py stl
+        run: ./make_models.py -l model_list -e stl
 
       - name: Render previews
-        run: xvfb-run ./make_models.py png
+        run: xvfb-run ./make_models.py -l model_list -e png
 
       - uses: actions/upload-artifact@v2
         with:

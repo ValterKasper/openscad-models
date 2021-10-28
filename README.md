@@ -10,6 +10,6 @@
 OpenSCAD has to be on the path.
 
 ```sh
-make <model_name>.stl    # generates stl file for single piece
-make <model_name>.png    # renders preview for single piece
+make_models.py -f continous_track.scad -e stl   # generates stl file for single piece
+make_models.py -l model_list -e png             # renders preview for all models in model_list
 ```
