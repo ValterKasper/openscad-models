@@ -1,4 +1,4 @@
-# OpenSCAD models
+# OpenSCAD models for 3D printing
 
 
 | ![Tracs](images/continuous_track.png) | ![Pole holder](images/pole_holder_default.png) | ![Double box](images/assortment_box_box_double.png) |
